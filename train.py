@@ -1,3 +1,12 @@
+"""
+Cricket Ball Classifier - Training Script
+
+Trains an ensemble of models to classify cricket balls as match-ready or not match-ready.
+
+Usage:
+    python train.py
+"""
+
 import os
 import torch
 import torch.nn as nn
