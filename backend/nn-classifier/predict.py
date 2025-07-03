@@ -29,7 +29,7 @@ except ImportError as e:
 
 def main():
     # Parameters
-    models_dir = 'models'   # Directory containing trained models
+    models_dir = 'nn-classifier/models'   # Directory containing trained models
     model_paths = [os.path.join(models_dir, f"model_{i}.pth") for i in range(1,4)]
     class_names = ['match_ready', 'not_match_ready']
     device = torch.device('mps' if torch.backends.mps.is_available() else 'cuda' if torch.cuda.is_available() else 'cpu')
