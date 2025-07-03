@@ -1,4 +1,4 @@
-# Match-Ready Cricket Ball Classifier 🏏
+# Cricket-Ready Ball Classifier 🏏
 
 A deep learning model to classify cricket balls as **match-ready** or **not match-ready** using PyTorch and ResNet18.
 
