@@ -11,13 +11,21 @@ Examples:
     python predict.py /Users/username/Desktop/cricket_ball.jpg
 """
 
-import torch
-import torch.nn as nn
-from torchvision import models, transforms
-from PIL import Image
-import os
-import sys
-import torch.nn.functional as F
+# Check for required dependencies
+try:
+    import torch
+    import torch.nn as nn
+    from torchvision import models, transforms
+    from PIL import Image
+    import os
+    import sys
+    import torch.nn.functional as F
+except ImportError as e:
+    print(f"❌ Missing required package: {e}")
+    print("💡 Install required packages with:")
+    print("   pip install torch torchvision pillow")
+    print("   Or use: pip install -r requirements.txt")
+    exit(1)
 
 def main():
     # Parameters
@@ -26,12 +34,14 @@ def main():
     class_names = ['match_ready', 'not_match_ready']
     device = torch.device('mps' if torch.backends.mps.is_available() else 'cuda' if torch.cuda.is_available() else 'cpu')
 
+    print(f"✅ All dependencies loaded successfully!")
+
     # Parse command line arguments
     if len(sys.argv) > 1:
         image_path = sys.argv[1]
         print(f"🖼️  Using image from command line: {image_path}")
     else:
-        print("❌ Error: No image path provided.")
+        print(f"❌ Error: No image path provided.")
         return
 
 

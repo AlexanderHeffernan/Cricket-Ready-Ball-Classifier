@@ -7,15 +7,25 @@ Usage:
     python train.py
 """
 
-import os
-import torch
-import torch.nn as nn
-import numpy as np
-import random
-from PIL import Image
-from torch.utils.data import DataLoader, Dataset
-from torchvision import datasets, models, transforms
-from sklearn.model_selection import KFold
+# Check for required dependencies
+try:
+    import os
+    import torch
+    import torch.nn as nn
+    import numpy as np
+    import random
+    from PIL import Image
+    from torch.utils.data import DataLoader, Dataset
+    from torchvision import datasets, models, transforms
+    from sklearn.model_selection import KFold
+except ImportError as e:
+    print(f"❌ Missing required package: {e}")
+    print("💡 Install required packages with:")
+    print("   pip install torch torchvision pillow scikit-learn numpy")
+    print("   Or use: pip install -r requirements.txt")
+    exit(1)
+
+print(f"✅ All dependencies loaded successfully!")
 
 # ----------------------
 # Configuration Parameters
