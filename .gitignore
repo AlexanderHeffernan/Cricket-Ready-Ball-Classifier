@@ -1,0 +1,25 @@
+# Dataset images
+/dataset/match_ready/*
+/dataset/not_match_ready/*
+
+# Test images
+/test_images/*
+
+# Generated files
+/models/*
+/venv
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# System files
+.DS_Store
+.vscode/
+*.log
+
+# Keep directory structure but ignore contents
+!dataset/match_ready/.gitkeep
+!dataset/not_match_ready/.gitkeep
+!test_images/.gitkeep
+!models/.gitkeep
