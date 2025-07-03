@@ -1,8 +1,8 @@
 ---
 id: fcgjrctkljb4czgpha1tw58
-title: Cricket-Ready Ball Classifier
+title: Root
 desc: 'Root document for the Cricket-Ready Ball Classifier Dendron vault.'
-updated: 1751535281891
+updated: 1751538015419
 created: 1751534834949
 ---
 # Welcome
