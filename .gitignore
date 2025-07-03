@@ -6,7 +6,6 @@
 /test_images/*
 
 # Generated files
-/models/*
 /venv
 __pycache__/
 *.pyc
@@ -23,3 +22,5 @@ __pycache__/
 !dataset/not_match_ready/.gitkeep
 !test_images/.gitkeep
 !models/.gitkeep
+
+# NOTE: We're keeping /models/ to include pre-trained models for immediate use
