@@ -1,4 +1,10 @@
 <template>
+  <nav>
+    <ul>
+      <li><router-link to="/">Predict</router-link></li>
+      <li><router-link to="/training">Training Tool</router-link></li>
+    </ul>
+  </nav>
   <router-view/>
 </template>
 <style>

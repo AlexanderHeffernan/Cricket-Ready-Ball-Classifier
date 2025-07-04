@@ -1,3 +1,11 @@
 /certs/*
 /target
 /backend.log
+/training_data/match_ready/*
+/training_data/not_match_ready/*
+
+.DS_Store
+
+# Keep directory structure but ignore contents
+!training_data/match_ready/.gitkeep
+!training_data/not_match_ready/.gitkeep

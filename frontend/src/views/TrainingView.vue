@@ -1,15 +1,15 @@
 <template>
-  <div class="predict-view">
-    <h1>Is your ball Cricket-Ready?</h1>
+  <div class="training-view">
+    <h1>Training Tool</h1>
     <p>
-      Take a photo with the camera below and we will determine for you
-      whether your ball is match ready, or if it's better to be saved for the nets.
+      Help improve our cricket ball classifier by taking photos and labeling them.
+      Your contributions will help train our neural network to be more accurate.
     </p>
     
     <!-- Camera Container with Overlay -->
     <div class="camera-container">
       <video ref="cameraStream" id="camera-stream" 
-
+             autoplay 
              muted 
              playsinline
              webkit-playsinline="true"
@@ -18,59 +18,58 @@
              :class="{ 'hidden': capturedImageSrc }"></video>
       
       <!-- Captured Image Overlay -->
-      <div v-if="capturedImageSrc" class="captured-overlay"
-           :class="{ 'loading': isLoading, 'match-ready': predictionResult?.prediction === 'match_ready', 'not-match-ready': predictionResult?.prediction === 'not_match_ready' }">
+      <div v-if="capturedImageSrc" class="captured-overlay">
         <img :src="capturedImageSrc" alt="Captured Image" class="captured-image-overlay">
-        
-        <!-- Loading Spinner -->
-        <div v-if="isLoading" class="loading-spinner">
-          <div class="spinner"></div>
-          <p>Analyzing...</p>
-        </div>
       </div>
       
       <!-- Invisible overlay to block video interactions -->
       <div class="video-blocker" v-if="!capturedImageSrc"></div>
-      
-      <!-- Glow Effect -->
-      <div class="glow-effect" 
-           :class="{ 'match-ready': predictionResult?.prediction === 'match_ready', 'not-match-ready': predictionResult?.prediction === 'not_match_ready' }">
-      </div>
     </div>
     
     <canvas ref="cameraCanvas" id="camera-canvas" style="display: none;"></canvas>
     
     <!-- Capture Button -->
-    <div class="capture-container" v-if="!predictionResult">
-      <button @click="capturePhoto" id="capture-button" :disabled="isLoading">
-        {{ isLoading ? 'Analyzing...' : 'Capture' }}
+    <div class="capture-container" v-if="!capturedImageSrc">
+      <button @click="capturePhoto" id="capture-button">
+        Capture Photo
       </button>
     </div>
     
-    <!-- Result Display -->
-    <div v-if="predictionResult" class="result-container">
-      <h2>Result:</h2>
-      <div class="prediction-result">
-        <p class="prediction-text"
-           :class="predictionResult.prediction === 'match_ready' ? 'match-ready' : 'not-match-ready'">
-          Your ball is: <strong>{{ predictionResult.prediction === 'match_ready' ? 'Match Ready' : 'Not Match Ready' }}</strong>
-        </p>
-        <p class="confidence-text">
-          Confidence: {{ Math.round(predictionResult.confidence * 100) }}%
-        </p>
+    <!-- Label Assignment -->
+    <div v-if="capturedImageSrc && !isLoading && !submitted" class="label-container">
+      <h3>Is this ball match-ready?</h3>
+      <div class="label-buttons">
+        <button @click="submitLabel('match_ready')" class="label-btn match-ready">
+          ✓ Match Ready
+        </button>
+        <button @click="submitLabel('not_match_ready')" class="label-btn not-match-ready">
+          ✗ Not Match Ready
+        </button>
       </div>
-      
-      <!-- Action Buttons -->
-      <div class="action-buttons">
-        <button @click="takeAnotherPhoto" class="action-btn primary">Take Another Photo</button>
-        <button @click="retryAnalysis" class="action-btn secondary">Retry Analysis</button>
-      </div>
+      <button @click="retakePhoto" class="retake-btn">
+        Retake Photo
+      </button>
+    </div>
+    
+    <!-- Loading State -->
+    <div v-if="isLoading" class="loading-container">
+      <div class="spinner"></div>
+      <p>Submitting your training data...</p>
+    </div>
+    
+    <!-- Success Message -->
+    <div v-if="submitted" class="success-container">
+      <h3>✓ Thank you!</h3>
+      <p>Your training data has been submitted successfully.</p>
+      <button @click="takeAnotherPhoto" class="action-btn primary">
+        Take Another Photo
+      </button>
     </div>
     
     <!-- Error Display -->
     <div v-if="error" class="error-container">
       <p class="error-text">{{ error }}</p>
-      <button @click="retryAnalysis" class="retry-btn">Retry</button>
+      <button @click="retrySubmission" class="retry-btn">Retry</button>
     </div>
   </div>
 </template>
@@ -82,9 +81,10 @@ const cameraStream = ref<HTMLVideoElement>()
 const cameraCanvas = ref<HTMLCanvasElement>()
 const capturedImageSrc = ref<string | null>(null)
 const isLoading = ref(false)
-const predictionResult = ref<{prediction: string, confidence: number} | null>(null)
+const submitted = ref(false)
 const error = ref<string | null>(null)
 const currentStream = ref<MediaStream | null>(null)
+const currentLabel = ref<string | null>(null)
 
 onMounted(() => {
   initializeCamera()
@@ -200,43 +200,93 @@ const capturePhoto = async () => {
     const video = cameraStream.value
     const context = canvas.getContext('2d')
     
-    // Set canvas dimensions to match video
-    canvas.width = video.videoWidth
-    canvas.height = video.videoHeight
+    if (!context) return
     
-    // Draw the video frame to canvas
-    context?.drawImage(video, 0, 0, canvas.width, canvas.height)
+    // Get the video element's display dimensions
+    const videoRect = video.getBoundingClientRect()
+    const videoDisplayWidth = videoRect.width
+    const videoDisplayHeight = videoRect.height
+    
+    // Calculate the circle dimensions (same as CSS)
+    const circleSize = Math.min(videoDisplayWidth, videoDisplayHeight)
+    const circleRadius = circleSize / 2
+    
+    // Calculate the scale factor between video display and actual video dimensions
+    const scaleX = video.videoWidth / videoDisplayWidth
+    const scaleY = video.videoHeight / videoDisplayHeight
+    
+    // Calculate the center point of the video in actual video coordinates
+    const centerX = video.videoWidth / 2
+    const centerY = video.videoHeight / 2
+    
+    // Calculate the actual radius in video coordinates
+    const actualRadius = circleRadius * Math.min(scaleX, scaleY)
+    
+    // Set canvas to be square with the size of the circular crop
+    const cropSize = actualRadius * 2
+    canvas.width = cropSize
+    canvas.height = cropSize
+    
+    // Clear the canvas
+    context.clearRect(0, 0, cropSize, cropSize)
+    
+    // Create a circular clipping path
+    context.save()
+    context.beginPath()
+    context.arc(cropSize / 2, cropSize / 2, actualRadius, 0, 2 * Math.PI)
+    context.clip()
+    
+    // Draw the circular portion of the video
+    context.drawImage(
+      video,
+      centerX - actualRadius, // source x
+      centerY - actualRadius, // source y
+      cropSize, // source width
+      cropSize, // source height
+      0, // destination x
+      0, // destination y
+      cropSize, // destination width
+      cropSize // destination height
+    )
+    
+    context.restore()
     
     // Convert canvas to image data URL
     const imageDataUrl = canvas.toDataURL('image/png')
     
     // Display the captured image overlay
     capturedImageSrc.value = imageDataUrl
-    
-    // Send image to backend for prediction
-    await sendImageForPrediction(canvas)
   }
 }
 
-const sendImageForPrediction = async (canvas: HTMLCanvasElement) => {
+const submitLabel = async (label: string) => {
+  currentLabel.value = label
+  await sendTrainingData(label)
+}
+
+const sendTrainingData = async (label: string) => {
   try {
     isLoading.value = true
     error.value = null
-    predictionResult.value = null
+    
+    if (!cameraCanvas.value) {
+      throw new Error('No image captured')
+    }
     
     // Convert canvas to blob
     const blob = await new Promise<Blob>((resolve) => {
-      canvas.toBlob((blob) => {
+      cameraCanvas.value!.toBlob((blob) => {
         resolve(blob!)
       }, 'image/jpeg', 0.8)
     })
     
     // Create FormData
     const formData = new FormData()
-    formData.append('image', blob, 'captured-image.jpg')
+    formData.append('image', blob, 'training-image.jpg')
+    formData.append('label', label)
     
-    // Send to backend
-    const response = await fetch('https://192.168.68.58:8445/predict', {
+    // Send to backend training endpoint
+    const response = await fetch('https://192.168.68.58:8445/training', {
       method: 'POST',
       body: formData,
     })
@@ -246,27 +296,36 @@ const sendImageForPrediction = async (canvas: HTMLCanvasElement) => {
     }
     
     const result = await response.json()
-    predictionResult.value = result
+    console.log('Training data submitted:', result)
+    
+    submitted.value = true
     
   } catch (err) {
-    console.error('Error sending image for prediction:', err)
-    error.value = 'Failed to analyze image. Please try again.'
+    console.error('Error submitting training data:', err)
+    error.value = 'Failed to submit training data. Please try again.'
   } finally {
     isLoading.value = false
   }
 }
 
+const retakePhoto = () => {
+  capturedImageSrc.value = null
+  currentLabel.value = null
+  error.value = null
+}
+
 const takeAnotherPhoto = () => {
   // Reset all states
   capturedImageSrc.value = null
-  predictionResult.value = null
+  currentLabel.value = null
+  submitted.value = false
   error.value = null
   isLoading.value = false
 }
 
-const retryAnalysis = async () => {
-  if (cameraCanvas.value) {
-    await sendImageForPrediction(cameraCanvas.value)
+const retrySubmission = async () => {
+  if (currentLabel.value) {
+    await sendTrainingData(currentLabel.value)
   }
 }
 
@@ -287,7 +346,7 @@ onUnmounted(() => {
   --background: #F8F9FA;
 }
 
-.predict-view {
+.training-view {
   max-width: 600px;
   margin: 0 auto;
   padding: 20px;
@@ -404,67 +463,6 @@ onUnmounted(() => {
   object-fit: cover;
 }
 
-.loading-spinner {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  color: white;
-  text-align: center;
-  background: rgba(0, 0, 0, 0.6);
-  padding: 20px;
-  border-radius: 10px;
-}
-
-.spinner {
-  width: 40px;
-  height: 40px;
-  border: 4px solid rgba(255, 255, 255, 0.3);
-  border-top: 4px solid white;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin: 0 auto 10px;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-.glow-effect {
-  position: absolute;
-  top: -8px;
-  left: -8px;
-  right: -8px;
-  bottom: -8px;
-  border-radius: 50%;
-  opacity: 0;
-  transition: opacity 0.5s ease;
-  pointer-events: none;
-}
-
-.glow-effect.match-ready {
-  opacity: 1;
-  box-shadow: 0 0 30px var(--secondary-green), 0 0 60px var(--secondary-green);
-  animation: pulse-green 2s ease-in-out infinite;
-}
-
-.glow-effect.not-match-ready {
-  opacity: 1;
-  box-shadow: 0 0 30px var(--cricket-red), 0 0 60px var(--cricket-red);
-  animation: pulse-red 2s ease-in-out infinite;
-}
-
-@keyframes pulse-green {
-  0%, 100% { box-shadow: 0 0 30px var(--secondary-green), 0 0 60px var(--secondary-green); }
-  50% { box-shadow: 0 0 40px var(--secondary-green), 0 0 80px var(--secondary-green); }
-}
-
-@keyframes pulse-red {
-  0%, 100% { box-shadow: 0 0 30px var(--cricket-red), 0 0 60px var(--cricket-red); }
-  50% { box-shadow: 0 0 40px var(--cricket-red), 0 0 80px var(--cricket-red); }
-}
-
 .capture-container {
   margin: 20px 0;
 }
@@ -482,26 +480,17 @@ onUnmounted(() => {
   box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
   text-transform: uppercase;
   letter-spacing: 1px;
-  /* Better mobile touch target */
   min-height: 44px;
   min-width: 44px;
-  /* Re-enable pointer events for button */
   pointer-events: auto;
 }
 
-#capture-button:hover:not(:disabled) {
+#capture-button:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
 }
 
-#capture-button:disabled {
-  background: #cccccc;
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
-}
-
-.result-container {
+.label-container {
   margin: 20px 0;
   padding: 20px;
   background-color: #f8f9fa;
@@ -510,31 +499,109 @@ onUnmounted(() => {
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
 }
 
-.prediction-text {
-  font-size: 20px;
-  font-weight: bold;
-  margin-bottom: 10px;
-}
-
-.prediction-text.match-ready {
-  color: var(--primary-green);
-}
-
-.prediction-text.not-match-ready {
-  color: var(--cricket-red);
-}
-
-.confidence-text {
-  font-size: 16px;
-  color: #666;
+.label-container h3 {
+  color: var(--cricket-brown);
   margin-bottom: 20px;
+  font-size: 1.5em;
 }
 
-.action-buttons {
+.label-buttons {
   display: flex;
-  gap: 10px;
+  gap: 15px;
   justify-content: center;
+  margin-bottom: 20px;
   flex-wrap: wrap;
+}
+
+.label-btn {
+  padding: 12px 24px;
+  font-size: 16px;
+  font-weight: bold;
+  border: none;
+  border-radius: 25px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  min-height: 44px;
+  min-width: 150px;
+  pointer-events: auto;
+}
+
+.label-btn.match-ready {
+  background: linear-gradient(135deg, var(--secondary-green), var(--primary-green));
+  color: white;
+  box-shadow: 0 2px 10px rgba(76, 175, 80, 0.3);
+}
+
+.label-btn.match-ready:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(76, 175, 80, 0.4);
+}
+
+.label-btn.not-match-ready {
+  background: linear-gradient(135deg, #C62828, #b71c1c);
+  color: white;
+  box-shadow: 0 2px 10px rgba(198, 40, 40, 0.3);
+}
+
+.label-btn.not-match-ready:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(198, 40, 40, 0.4);
+}
+
+.retake-btn {
+  padding: 8px 16px;
+  font-size: 14px;
+  background: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-height: 44px;
+  pointer-events: auto;
+}
+
+.retake-btn:hover {
+  background: #5a6268;
+  transform: translateY(-1px);
+}
+
+.loading-container {
+  margin: 20px 0;
+  padding: 20px;
+  text-align: center;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid rgba(76, 175, 80, 0.3);
+  border-top: 4px solid var(--secondary-green);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 10px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.success-container {
+  margin: 20px 0;
+  padding: 20px;
+  background: linear-gradient(135deg, #e8f5e8, #c8e6c8);
+  color: var(--primary-green);
+  border: 2px solid var(--secondary-green);
+  border-radius: 15px;
+  box-shadow: 0 4px 15px rgba(76, 175, 80, 0.2);
+}
+
+.success-container h3 {
+  font-size: 1.5em;
+  margin-bottom: 10px;
 }
 
 .action-btn {
@@ -547,9 +614,9 @@ onUnmounted(() => {
   transition: all 0.3s ease;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  /* Better mobile touch target */
   min-height: 44px;
   pointer-events: auto;
+  margin-top: 15px;
 }
 
 .action-btn.primary {
@@ -561,17 +628,6 @@ onUnmounted(() => {
 .action-btn.primary:hover {
   transform: translateY(-1px);
   box-shadow: 0 4px 15px rgba(76, 175, 80, 0.4);
-}
-
-.action-btn.secondary {
-  background: linear-gradient(135deg, #6c757d, #495057);
-  color: white;
-  box-shadow: 0 2px 10px rgba(108, 117, 125, 0.3);
-}
-
-.action-btn.secondary:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 15px rgba(108, 117, 125, 0.4);
 }
 
 .error-container {
@@ -593,7 +649,6 @@ onUnmounted(() => {
   border-radius: 20px;
   cursor: pointer;
   transition: all 0.3s ease;
-  /* Better mobile touch target */
   min-height: 44px;
   pointer-events: auto;
 }
@@ -619,7 +674,7 @@ p {
 
 /* Responsive design */
 @media (max-width: 768px) {
-  .predict-view {
+  .training-view {
     padding: 15px;
   }
   
@@ -631,12 +686,12 @@ p {
     font-size: 2em;
   }
   
-  .action-buttons {
+  .label-buttons {
     flex-direction: column;
     align-items: center;
   }
   
-  .action-btn {
+  .label-btn {
     width: 200px;
   }
 }
