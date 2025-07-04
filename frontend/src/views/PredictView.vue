@@ -200,12 +200,56 @@ const capturePhoto = async () => {
     const video = cameraStream.value
     const context = canvas.getContext('2d')
     
-    // Set canvas dimensions to match video
-    canvas.width = video.videoWidth
-    canvas.height = video.videoHeight
+    if (!context) return
     
-    // Draw the video frame to canvas
-    context?.drawImage(video, 0, 0, canvas.width, canvas.height)
+    // Get the video element's display dimensions
+    const videoRect = video.getBoundingClientRect()
+    const videoDisplayWidth = videoRect.width
+    const videoDisplayHeight = videoRect.height
+    
+    // Calculate the circle dimensions (same as CSS)
+    const circleSize = Math.min(videoDisplayWidth, videoDisplayHeight)
+    const circleRadius = circleSize / 2
+    
+    // Calculate the scale factor between video display and actual video dimensions
+    const scaleX = video.videoWidth / videoDisplayWidth
+    const scaleY = video.videoHeight / videoDisplayHeight
+    
+    // Calculate the center point of the video in actual video coordinates
+    const centerX = video.videoWidth / 2
+    const centerY = video.videoHeight / 2
+    
+    // Calculate the actual radius in video coordinates
+    const actualRadius = circleRadius * Math.min(scaleX, scaleY)
+    
+    // Set canvas to be square with the size of the circular crop
+    const cropSize = actualRadius * 2
+    canvas.width = cropSize
+    canvas.height = cropSize
+    
+    // Clear the canvas
+    context.clearRect(0, 0, cropSize, cropSize)
+    
+    // Create a circular clipping path
+    context.save()
+    context.beginPath()
+    context.arc(cropSize / 2, cropSize / 2, actualRadius, 0, 2 * Math.PI)
+    context.clip()
+    
+    // Draw the circular portion of the video
+    context.drawImage(
+      video,
+      centerX - actualRadius, // source x
+      centerY - actualRadius, // source y
+      cropSize, // source width
+      cropSize, // source height
+      0, // destination x
+      0, // destination y
+      cropSize, // destination width
+      cropSize // destination height
+    )
+    
+    context.restore()
     
     // Convert canvas to image data URL
     const imageDataUrl = canvas.toDataURL('image/png')

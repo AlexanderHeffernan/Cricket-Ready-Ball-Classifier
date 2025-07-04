@@ -34,15 +34,12 @@ def main():
     class_names = ['match_ready', 'not_match_ready']
     device = torch.device('mps' if torch.backends.mps.is_available() else 'cuda' if torch.cuda.is_available() else 'cpu')
 
-    print(f"✅ All dependencies loaded successfully!")
-
     # Parse command line arguments
     if len(sys.argv) > 1:
         image_path = sys.argv[1]
-        print(f"🖼️  Using image from command line: {image_path}")
     else:
         print(f"❌ Error: No image path provided.")
-        return
+        sys.exit(1)
 
 
     # Validate image path
@@ -67,9 +64,6 @@ def main():
         print("💡 Please train the model first by running: python train.py")
         sys.exit(1)
 
-    print(f"📁 Loading models from: {models_dir}")
-    print(f"🖥️  Using device: {device}")
-
     # Image transform (same as test_transform)
     transform = transforms.Compose([
         transforms.Resize((224, 224)),
@@ -82,19 +76,14 @@ def main():
     try:
         image = Image.open(image_path).convert('RGB')
         input_tensor = transform(image).unsqueeze(0).to(device)  # shape: [1, 3, 224, 224]
-        print(f"✅ Image loaded and preprocessed: {os.path.basename(image_path)}")
-        print(f"   📏 Original size: {image.size}")
-        print(f"   📏 Processed size: 224x224")
     except Exception as e:
         print(f"❌ Error loading image: {e}")
         sys.exit(1)
 
     # Load all models
-    print(f"\n🧠 Loading {len(model_paths)} trained models...")
     models_list = []
     for i, path in enumerate(model_paths):
         try:
-            print(f"   Loading model {i+1}: {os.path.basename(path)}")
             model = models.resnet18(weights=None)
             
             # Match the exact architecture from training script
@@ -111,10 +100,7 @@ def main():
             print(f"❌ Error loading model {path}: {e}")
             sys.exit(1)
 
-    print(f"✅ All models loaded successfully!")
-
     # Predict with voting
-    print(f"\n🔮 Running inference...")
     with torch.no_grad():
         # Collect all softmax probabilities
         probs = []
@@ -124,7 +110,6 @@ def main():
             probs.append(prob.cpu())
             individual_prediction = class_names[prob.argmax().item()]
             individual_confidence = prob.max().item()
-            print(f"   Model {i+1}: {individual_prediction} ({individual_confidence:.4f})")
 
         # Average probabilities
         avg_prob = torch.mean(torch.stack(probs), dim=0)
@@ -133,24 +118,7 @@ def main():
         label = class_names[predicted_class]
 
     # Display results
-    print("\n" + "="*60)
-    print("📊 ENSEMBLE PREDICTION RESULTS")
-    print("="*60)
-    print(f"🖼️  Image: {os.path.basename(image_path)}")
-    print(f"✅ Final Prediction: {label.upper()}")
-    print(f"📊 Confidence: {confidence:.4f} ({confidence*100:.2f}%)")
-    print(f"📊 Individual Probabilities:")
-    print(f"   🟢 {class_names[0]}: {avg_prob[0][0]:.4f} ({avg_prob[0][0]*100:.2f}%)")
-    print(f"   🔴 {class_names[1]}: {avg_prob[0][1]:.4f} ({avg_prob[0][1]*100:.2f}%)")
-    print("="*60)
-
-    # Interpretation
-    if confidence > 0.9:
-        print("💪 Very confident prediction!")
-    elif confidence > 0.7:
-        print("👍 Confident prediction")
-    else:
-        print("⚠️  Low confidence - consider manual inspection")
+    print(f"Prediction: {label}; Confidence: {confidence:.4f}")
 
 if __name__ == "__main__":
     main()

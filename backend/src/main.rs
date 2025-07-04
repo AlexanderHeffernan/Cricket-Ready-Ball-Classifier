@@ -289,59 +289,28 @@ async fn predict_image_route(payload: Multipart) -> rusty_api::HttpResponse {
 /// Parse the output from predict.py script into a structured JSON response
 fn parse_prediction_output(output: &str) -> Value {
     let lines: Vec<&str> = output.lines().collect();
-    
     let mut prediction = "unknown";
     let mut confidence = 0.0;
-    let mut match_ready_prob = 0.0;
-    let mut not_match_ready_prob = 0.0;
-    let mut image_name = "uploaded_image";
 
-    // Parse the prediction output
+    // Parse the prediction output - new format: "Prediction: {label}; Confidence: {confidence:.4f}"
     for line in lines {
-        if line.contains("Final Prediction:") {
-            if line.contains("MATCH_READY") {
-                prediction = "match_ready";
-            } else if line.contains("NOT_MATCH_READY") {
-                prediction = "not_match_ready";
-            }
-        } else if line.contains("Confidence:") {
-            // Extract confidence percentage
-            if let Some(start) = line.find("Confidence: ") {
-                let confidence_str = &line[start + 12..];
-                if let Some(end) = confidence_str.find(' ') {
-                    if let Ok(conf) = confidence_str[..end].parse::<f64>() {
-                        confidence = conf;
+        if line.contains("Prediction:") && line.contains("Confidence:") {
+            // Extract prediction label
+            if let Some(pred_start) = line.find("Prediction: ") {
+                let after_pred = &line[pred_start + 12..];
+                if let Some(pred_end) = after_pred.find(';') {
+                    let pred_str = after_pred[..pred_end].trim();
+                    if pred_str == "match_ready" || pred_str == "not_match_ready" {
+                        prediction = pred_str;
                     }
                 }
             }
-        } else if line.contains("match_ready:") {
-            // Extract match_ready probability
-            if let Some(start) = line.find("match_ready: ") {
-                let prob_str = &line[start + 13..];
-                if let Some(end) = prob_str.find(' ') {
-                    if let Ok(prob) = prob_str[..end].parse::<f64>() {
-                        match_ready_prob = prob;
-                    }
-                }
-            }
-        } else if line.contains("not_match_ready:") {
-            // Extract not_match_ready probability
-            if let Some(start) = line.find("not_match_ready: ") {
-                let prob_str = &line[start + 17..];
-                if let Some(end) = prob_str.find(' ') {
-                    if let Ok(prob) = prob_str[..end].parse::<f64>() {
-                        not_match_ready_prob = prob;
-                    }
-                }
-            }
-        } else if line.contains("Image:") {
-            // Extract image name
-            if let Some(start) = line.find("Image: ") {
-                let name_start = start + 7;
-                if let Some(end) = line[name_start..].find('\n') {
-                    image_name = &line[name_start..name_start + end];
-                } else {
-                    image_name = &line[name_start..];
+            
+            // Extract confidence value
+            if let Some(conf_start) = line.find("Confidence: ") {
+                let conf_str = &line[conf_start + 12..];
+                if let Ok(conf) = conf_str.trim().parse::<f64>() {
+                    confidence = conf;
                 }
             }
         }
