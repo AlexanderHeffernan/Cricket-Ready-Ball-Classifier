@@ -1,0 +1,9 @@
+---
+id: dbpuopl50miw8fau7jdpe2e
+title: Training Route
+desc: ''
+updated: 1751614788302
+created: 1751614303254
+---
+## Overview
+A key feature of this program is the ability for users to upload images of cricket balls and label them as either "match_ready" or "not_match_ready". This functionality is crucial, as it allows for the collection of data that can be manually added to the training dataset for future model training.

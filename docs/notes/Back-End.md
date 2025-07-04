@@ -2,7 +2,7 @@
 id: 87ckbw69y6e172qqi1z029t
 title: Back-End
 desc: ''
-updated: 1751613965475
+updated: 1751614737012
 created: 1751613762926
 ---
 ## Overview
@@ -23,6 +23,6 @@ The back-end of the Cricket-Ready Ball Classifier project is responsible for pro
 - **Description**: Accepts an image file, processes it, and returns a prediction on whether the cricket ball is match-ready, not match-ready, or not a cricket ball.
 - **
 
-### `/train`
+### [[Back-End.Training Route]] `/train`
 - **Method**: POST
 - **Description**: Accepts a label and an image file, and saves the image for later manual addition to the training dataset. This endpoint is used to collect data for future model training, and it does not trigger immediate model retraining.
