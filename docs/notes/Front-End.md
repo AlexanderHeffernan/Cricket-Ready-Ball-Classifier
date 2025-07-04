@@ -2,7 +2,7 @@
 id: ulkcc4ab2ws3yjh7zb56tyv
 title: Front-End
 desc: ''
-updated: 1751557917865
+updated: 1751589961652
 created: 1751556253136
 ---
 ## Overview
@@ -95,3 +95,9 @@ graph TB
 - **Loading State**: Displays a loading spinner while the image is being processed
 - **Error Handling**: Helpful error messages for failed uploads
 - **Fast Performance**: Optimized images and minimal loading times for a smooth user experience
+
+### Color Scheme
+- **Primary Green**: `#2E7D32` (deep cricket field green)
+- **Secondary Green**: `#4CAF50` (lighter green for buttons)
+- **Accent Red**: `#C62828` (cricket ball red for "not-ready" states)
+- **Background**: `#F8F9FA` (clean off-white)
