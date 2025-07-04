@@ -495,7 +495,7 @@ onUnmounted(() => {
 
 .glow-effect.not-match-ready {
   opacity: 1;
-  box-shadow: 0 0 30px var(--cricket-red), 0 0 60px var(--cricket-red);
+  box-shadow: 0 0 30px #C62828, 0 0 60px #C62828;
   animation: pulse-red 2s ease-in-out infinite;
 }
 
@@ -505,8 +505,8 @@ onUnmounted(() => {
 }
 
 @keyframes pulse-red {
-  0%, 100% { box-shadow: 0 0 30px var(--cricket-red), 0 0 60px var(--cricket-red); }
-  50% { box-shadow: 0 0 40px var(--cricket-red), 0 0 80px var(--cricket-red); }
+  0%, 100% { box-shadow: 0 0 30px #C62828, 0 0 60px #C62828; }
+  50% { box-shadow: 0 0 40px #C62828, 0 0 80px #C62828; }
 }
 
 .capture-container {
