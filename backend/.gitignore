@@ -3,6 +3,7 @@
 /backend.log
 /training_data/match_ready/*
 /training_data/not_match_ready/*
+/training_data/training_log.jsonl
 
 .DS_Store
 
