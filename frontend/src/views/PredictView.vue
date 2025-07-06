@@ -292,9 +292,18 @@ const sendImageForPrediction = async (canvas: HTMLCanvasElement) => {
     const result = await response.json()
     predictionResult.value = result
     
-  } catch (err) {
+  } catch (err: any) {
     console.error('Error sending image for prediction:', err)
-    error.value = 'Failed to analyze image. Please try again.'
+    
+    // Check if it's a network error or backend unavailable
+    console.log("Error:", err.name, err.message);
+    if (err.name === 'TypeError' && err.message.includes('Load failed')) {
+      error.value = 'Backend service is currently unavailable. Please try again later.'
+    } else if (err.message.includes('500') || err.message.includes('502') || err.message.includes('503')) {
+      error.value = 'Backend service is experiencing issues. Please try again later.'
+    } else {
+      error.value = 'Failed to analyze image. Please try again.'
+    }
   } finally {
     isLoading.value = false
   }
