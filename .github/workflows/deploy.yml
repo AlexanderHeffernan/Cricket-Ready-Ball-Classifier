@@ -1,4 +1,3 @@
-Users/alexanderheffernan/Documents/MyDocuments/Coding/WebAppDev/Python/Cricket-Ready-Ball-Classifier/.github/workflows/deploy.yml
 name: Deploy to GitHub Pages
 
 on:
