@@ -21,7 +21,7 @@
       ref="camera" />
 
     <!-- Prediction Results -->
-    <div v-if="mode === 'predict' && predictionResult" class="result-container">
+    <div v-if="mode === 'predict' && predictionResult" class="result-container" ref="resultContainer">
       <h2>Result:</h2>
       <div class="prediction-result">
         <p class="prediction-text" :class="predictionResult.prediction">
@@ -67,7 +67,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, nextTick } from 'vue'
 import CameraComponent from '@/components/CameraComponent.vue'
 
 type Mode = 'predict' | 'train'
@@ -80,6 +80,7 @@ const predictionResult = ref<PredictionResult | null>(null)
 const submitted = ref(false)
 const capturedData = ref<{ canvas: HTMLCanvasElement, imageDataUrl: string } | null>(null)
 const camera = ref<InstanceType<typeof CameraComponent>>()
+const resultContainer = ref<HTMLElement>()
 
 const modeDescription = computed(() => 
   mode.value === 'predict' 
@@ -97,6 +98,16 @@ const glowClass = computed(() => {
   }
   return ''
 })
+
+const scrollToResult = async () => {
+	await nextTick()
+	if (resultContainer.value) {
+		resultContainer.value.scrollIntoView({
+			behavior: 'smooth',
+			block: 'start'
+		})
+	}
+}
 
 const handleCapture = (canvas: HTMLCanvasElement, imageDataUrl: string) => {
   capturedData.value = { canvas, imageDataUrl }
@@ -130,6 +141,8 @@ const sendPrediction = async (canvas: HTMLCanvasElement) => {
     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
     
     predictionResult.value = await response.json()
+
+	await scrollToResult()
     
   } catch (err: any) {
     console.error('Prediction error:', err)
@@ -200,6 +213,9 @@ const retryPrediction = () => {
 </script>
 
 <style scoped>
+html {
+	scroll-behavior: smooth;
+}
 .cricket-view {
   max-width: 600px;
   margin: 0 auto;
@@ -239,6 +255,19 @@ const retryPrediction = () => {
   border-radius: 15px;
   border: 2px solid #dee2e6;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+
+  animation: fadeInUp 0.5s ease-out;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .prediction-text {
@@ -340,11 +369,15 @@ p {
 
 @media (max-width: 768px) {
   .cricket-view {
-    padding: 15px;
+    padding: 15px 25px;
   }
   
   h1 {
-    font-size: 2em;
+    font-size: 1.5em;
+  }
+
+  p {
+	font-size: 1em;
   }
   
   .action-buttons, .label-buttons {
