@@ -127,7 +127,9 @@ const sendPrediction = async (canvas: HTMLCanvasElement) => {
     error.value = null
     
     const blob = await new Promise<Blob>((resolve) => {
-      canvas.toBlob((blob) => resolve(blob!), 'image/jpeg', 0.8)
+      canvas.toBlob((blob) => {
+        if (blob) resolve(blob)
+      }, 'image/jpeg', 0.8)
     })
     
     const formData = new FormData()
@@ -144,8 +146,9 @@ const sendPrediction = async (canvas: HTMLCanvasElement) => {
 
 	await scrollToResult()
     
-  } catch (err: any) {
-    console.error('Prediction error:', err)
+  } catch (e: unknown) {
+    console.error('Prediction error:', error)
+    const err = e as Error
     if (err.name === 'TypeError' && err.message.includes('Load failed')) {
       error.value = 'Backend service unavailable. Please try again later.'
     } else {
@@ -164,7 +167,11 @@ const submitLabel = async (label: string) => {
     error.value = null
     
     const blob = await new Promise<Blob>((resolve) => {
-      capturedData.value!.canvas.toBlob((blob) => resolve(blob!), 'image/jpeg', 0.8)
+      if (capturedData.value) {
+        capturedData.value.canvas.toBlob((blob) => {
+          if (blob) resolve(blob)
+        }, 'image/jpeg', 0.8)
+      }
     })
     
     const formData = new FormData()
@@ -180,14 +187,14 @@ const submitLabel = async (label: string) => {
     
     submitted.value = true
     
-  } catch (err: any) {
-    console.error('Training error:', err)
-
-	if (err.name === 'TypeError' && err.message.includes('Load failed')) {
-		error.value = 'Backend service unavailable. Please try again later.'
-	} else {
-		error.value = 'Failed to submit training data. Please try again.'
-	}
+  } catch (e: unknown) {
+    console.error('Training error:', error)
+    const err = e as Error
+    if (err.name === 'TypeError' && err.message.includes('Load failed')) {
+      error.value = 'Backend service unavailable. Please try again later.'
+    } else {
+      error.value = 'Failed to submit training data. Please try again.'
+    }
   } finally {
     isLoading.value = false
   }

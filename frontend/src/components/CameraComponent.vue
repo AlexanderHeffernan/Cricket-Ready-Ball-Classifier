@@ -37,7 +37,7 @@ interface Props {
   glowClass?: string;
 }
 
-const props = withDefaults(defineProps<Props>(), {
+withDefaults(defineProps<Props>(), {
   isLoading: false,
   loadingText: 'Processing...',
   glowClass: ''
@@ -82,13 +82,15 @@ const initializeCamera = async () => {
       await cameraStream.value.play();
     }
     
-  } catch (err: any) {
-    const errorMessages = {
+  } catch (error: unknown) {
+    console.error('Camera initialization error:', error)
+    const err = error as Error
+    const errorMessages: Record<string, string> = {
       'NotAllowedError': 'Camera access denied. Please allow permissions.',
       'NotFoundError': 'No camera found.',
       'NotSupportedError': 'Camera requires HTTPS.'
-    };
-    emit('error', errorMessages[err.name as keyof typeof errorMessages] || 'Failed to access camera.');
+    }
+    emit('error', errorMessages[err.name] || `Failed to access camera: ${err.message}`)
   }
 }
 
