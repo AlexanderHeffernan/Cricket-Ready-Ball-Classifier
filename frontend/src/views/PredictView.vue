@@ -146,7 +146,7 @@ const sendPrediction = async (canvas: HTMLCanvasElement) => {
     
   } catch (err: any) {
     console.error('Prediction error:', err)
-    if (err.name === 'TypeError' && err.message.includes('fetch')) {
+    if (err.name === 'TypeError' && err.message.includes('Load failed')) {
       error.value = 'Backend service unavailable. Please try again later.'
     } else {
       error.value = 'Failed to analyze image. Please try again.'
@@ -180,9 +180,14 @@ const submitLabel = async (label: string) => {
     
     submitted.value = true
     
-  } catch (err) {
+  } catch (err: any) {
     console.error('Training error:', err)
-    error.value = 'Failed to submit training data. Please try again.'
+
+	if (err.name === 'TypeError' && err.message.includes('Load failed')) {
+		error.value = 'Backend service unavailable. Please try again later.'
+	} else {
+		error.value = 'Failed to submit training data. Please try again.'
+	}
   } finally {
     isLoading.value = false
   }
