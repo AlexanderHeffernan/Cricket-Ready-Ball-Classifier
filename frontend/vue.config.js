@@ -3,6 +3,7 @@ const path = require('path')
 
 module.exports = {
   productionSourceMap: false,
+  publicPath: process.env.NODE_ENV === 'production' ? '/Cricket-Ready-Ball-Classifier/' : '/',
   devServer: {
     https: {
       key: fs.readFileSync(path.resolve(__dirname, 'certs/key.pem')),
@@ -11,5 +12,19 @@ module.exports = {
     host: '0.0.0.0',
     port: 8080,
     allowedHosts: 'all'
+  },
+  configureWebpack: {
+    optimization: {
+      splitChunks: {
+        chunks: 'all',
+        cacheGroups: {
+          vendor: {
+            test: /[\\/]node_modules[\\/]/,
+            name: 'vendors',
+            chunks: 'all'
+          }
+        }
+      }
+    }
   }
 }
