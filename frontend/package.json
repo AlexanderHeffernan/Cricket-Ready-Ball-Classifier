@@ -50,6 +50,12 @@
       "ecmaVersion": 2020
     },
     "rules": {},
+    "globals": {
+      "defineProps": "readonly",
+      "defineEmits": "readonly",
+      "defineExpose": "readonly",
+      "withDefaults": "readonly"
+    },
     "overrides": [
       {
         "files": [
