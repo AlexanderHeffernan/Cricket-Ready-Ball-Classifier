@@ -135,8 +135,11 @@ const sendPrediction = async (canvas: HTMLCanvasElement) => {
     const formData = new FormData()
     formData.append('image', blob, 'captured-image.jpg')
     
-    const response = await fetch('https://192.168.1.95:8445/predict', {
+    const response = await fetch('https://meerkat-flowing-blatantly.ngrok-free.app/predict', {
       method: 'POST',
+      headers: {
+        'ngrok-skip-browser-warning': 'true',
+      },
       body: formData,
     })
     
@@ -178,8 +181,11 @@ const submitLabel = async (label: string) => {
     formData.append('image', blob, 'training-image.jpg')
     formData.append('label', label)
     
-    const response = await fetch('https://192.168.1.95:8445/training', {
+    const response = await fetch('https://meerkat-flowing-blatantly.ngrok-free.app/training', {
       method: 'POST',
+      headers: {
+        'ngrok-skip-browser-warning': 'true',
+      },
       body: formData,
     })
     
