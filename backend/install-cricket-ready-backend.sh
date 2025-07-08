@@ -44,7 +44,7 @@ Description=Cricket-Ready Ball Classifier Backend
 After=network.target
 
 [Service]
-ExecStart=$INSTALL_DIR/Cricket-Ready-Ball-Classifier-Backend
+ExecStart=$INSTALL_DIR/Cricket-Ready-Backend
 WorkingDirectory=$INSTALL_DIR
 Restart=always
 User=$(whoami)
