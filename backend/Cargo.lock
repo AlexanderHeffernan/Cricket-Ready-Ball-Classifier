@@ -3,6 +3,22 @@
 version = 4
 
 [[package]]
+name = "Cricket-Ready-Backend"
+version = "0.1.0"
+dependencies = [
+ "actix-multipart",
+ "bytes",
+ "chrono",
+ "futures-util",
+ "log",
+ "rusty-api",
+ "serde_json",
+ "simplelog",
+ "time",
+ "tokio",
+]
+
+[[package]]
 name = "actix-codec"
 version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -654,22 +670,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a97769d94ddab943e4510d138150169a2758b5ef3eb191a9ee688de3e23ef7b3"
 dependencies = [
  "cfg-if",
-]
-
-[[package]]
-name = "cricket-ball-backend"
-version = "0.1.0"
-dependencies = [
- "actix-multipart",
- "bytes",
- "chrono",
- "futures-util",
- "log",
- "rusty-api",
- "serde_json",
- "simplelog",
- "time",
- "tokio",
 ]
 
 [[package]]

@@ -331,7 +331,7 @@ fn main() {
     rusty_api::Api::new()
         .certs("certs/cert.pem", "certs/key.pem")
         .rate_limit(3, 20)
-        .bind("0.0.0.0", 8445)
+        .bind("0.0.0.0", 49161)
         .configure_routes(routes)
         .configure_cors(|| {
             rusty_api::Cors::default()
