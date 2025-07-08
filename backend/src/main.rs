@@ -329,7 +329,7 @@ fn main() {
         .add_route(rusty_api::Method::POST, "/training", training_route);
 
     rusty_api::Api::new()
-        .certs("certs/cert.pem", "certs/key.pem")
+        .certs("cricket-ready.crt", "cricket-ready.key")
         .rate_limit(3, 20)
         .bind("0.0.0.0", 49161)
         .configure_routes(routes)
