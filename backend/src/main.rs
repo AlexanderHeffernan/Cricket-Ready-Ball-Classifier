@@ -336,10 +336,9 @@ fn main() {
         .configure_routes(routes)
         .configure_cors(|| {
             rusty_api::Cors::default()
-                .allowed_methods(vec!["POST"])
+                .allow_any_method()
                 .allow_any_origin()
-                .allowed_header(http::header::CONTENT_TYPE)
-                .allowed_header("ngrok-skip-browser-warning")
+                .allow_any_header()
         })
         .start();
 }
