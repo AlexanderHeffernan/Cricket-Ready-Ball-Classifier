@@ -15,7 +15,7 @@ command -v curl >/dev/null 2>&1 || { echo -e "${RED}curl is required. Please ins
 command -v openssl >/dev/null 2>&1 || { echo -e "${RED}OpenSSL is required. Please install it (e.g., 'sudo apt install openssl').${NC}"; exit 1; }
 
 # Set install directory
-INSTALL_DIR="$HOME/Cricket-Ready-Ball-Classifier-Backend"
+INSTALL_DIR="$HOME/Cricket-Ready-Backend"
 mkdir -p "$INSTALL_DIR"
 cd "$INSTALL_DIR"
 
