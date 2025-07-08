@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 rusty-api = "0.2.1"
+actix-web = "4.9"
 actix-multipart = "0.6"
 futures-util = "0.3"
 bytes = "1.0"

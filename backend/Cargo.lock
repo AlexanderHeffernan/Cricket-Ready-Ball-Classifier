@@ -7,6 +7,7 @@ name = "Cricket-Ready-Backend"
 version = "0.1.0"
 dependencies = [
  "actix-multipart",
+ "actix-web",
  "bytes",
  "chrono",
  "futures-util",

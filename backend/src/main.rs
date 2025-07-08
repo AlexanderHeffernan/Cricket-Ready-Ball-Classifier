@@ -9,6 +9,7 @@ use std::process::Command;
 use std::fs;
 use std::path::Path;
 use serde_json::{json, Value};
+use actix_web::{http};
 
 use request_logger::RequestLogger;
 
@@ -335,8 +336,9 @@ fn main() {
         .configure_routes(routes)
         .configure_cors(|| {
             rusty_api::Cors::default()
+                .allowed_methods(vec!["POST"])
                 .allow_any_origin()
-                .allow_any_method()
+                .allowed_header(http::header::CONTENT_TYPE)
                 .allowed_header("ngrok-skip-browser-warning")
         })
         .start();
