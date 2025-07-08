@@ -16,7 +16,9 @@ command -v openssl >/dev/null 2>&1 || { echo -e "${RED}OpenSSL is required. Plea
 
 # Set install directory
 INSTALL_DIR="$HOME/Cricket-Ready-Backend"
+CERTS_DIR="$INSTALL_DIR/certs"
 mkdir -p "$INSTALL_DIR"
+mkdir -p "$CERTS_DIR"
 cd "$INSTALL_DIR"
 
 # Download the pre-built binary
@@ -25,14 +27,14 @@ curl -sSL -o Cricket-Ready-Backend https://raw.githubusercontent.com/AlexanderHe
 chmod +x Cricket-Ready-Backend
 
 # Generate unique self-signed certificate and key
-if [ ! -f "cricket-ready.crt" ] || [ ! -f "cricket-ready.key" ]; then
+if [ ! -f "$CERTS_DIR/cricket-ready.crt" ] || [ ! -f "$CERTS_DIR/cricket-ready.key" ]; then
     echo "Generating self-signed certificate and key..."
     openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-        -keyout cricket-ready.key \
-        -out cricket-ready.crt \
+        -keyout "$CERTS_DIR/cricket-ready.key" \
+        -out "$CERTS_DIR/cricket-ready.crt" \
         -subj "/C=US/ST=YourState/L=YourCity/O=Cricket-Ready-Ball-Classifier/OU=Back-end/CN=$(hostname)" \
         -addext "subjectAltName=DNS:$(hostname)"
-    chmod 600 cricket-ready.crt cricket-ready.key
+    chmod 600 "$CERTS_DIR/cricket-ready.crt" "$CERTS_DIR/cricket-ready.key"
 fi
 
 # Set up systemd service
