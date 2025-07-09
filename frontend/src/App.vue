@@ -20,6 +20,7 @@ html, body {
   font-family: Arial, sans-serif;
   background-color: var(--background);
   min-height: 100vh;
+  min-height: 100dvh;
 }
 
 /* Fixed background image using a div instead of CSS background */
@@ -28,7 +29,8 @@ html, body {
   top: 0;
   left: 0;
   width: 100%;
-  height: 100%;
+  height: 100vh;
+  height: 100lvh;
   background-image: url('./assets/background.jpg');
   background-size: cover;
   background-position: center center;
