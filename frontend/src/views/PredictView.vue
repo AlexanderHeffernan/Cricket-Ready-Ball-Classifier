@@ -12,8 +12,8 @@
 		<h1>{{ mode === 'predict' ? 'Is your ball Cricket-Ready?' : 'Training Tool' }}</h1>
 		<p>{{ modeDescription }}</p>
 
-		<CameraComponent :is-loading="isLoading" :loading-text="loadingText" :glow-class="glowClass"
-			@captured="handleCapture" @error="handleError" ref="camera" />
+		<CameraComponent :is-loading="isLoading" :loading-text="loadingText" :glow-class="glowClass" :error="error" :show-retry="!!error"
+			@captured="handleCapture" @error="handleError" @retry="retry" ref="camera" />
 
 		<!-- Prediction Results -->
 		<div v-if="mode === 'predict' && predictionResult" class="result-container" ref="resultContainer">
@@ -51,12 +51,6 @@
 			<h3>✓ Thank you!</h3>
 			<p>Your training data has been submitted successfully.</p>
 			<button @click="reset" class="action-btn primary">Take Another Photo</button>
-		</div>
-
-		<!-- Error Display -->
-		<div v-if="error" class="error-container">
-			<p class="error-text">{{ error }}</p>
-			<button @click="retry" class="retry-btn">Retry</button>
 		</div>
 	</div>
 </template>
@@ -130,7 +124,7 @@ const sendPrediction = async (canvas: HTMLCanvasElement) => {
 		const formData = new FormData();
 		formData.append('image', blob, 'captured-image.jpg');
 
-		const response = await fetch('https://meerkat-flowing-blatantly.ngrok-free.app/predict', {
+		const response = await fetch('https://192.168.1.95:49161/predict', {
 			method: 'POST',
 			headers: {
 				'ngrok-skip-browser-warning': 'true',
@@ -148,9 +142,9 @@ const sendPrediction = async (canvas: HTMLCanvasElement) => {
 		console.error('Prediction error:', error);
 		const err = e as Error;
 		if (err.name === 'TypeError' && err.message.includes('Load failed')) {
-			error.value = 'Backend service unavailable. Please try again later.';
+			error.value = 'ERROR: Backend service unavailable. Please try again later.';
 		} else {
-			error.value = 'Failed to analyze image. Please try again.';
+			error.value = 'ERROR: Failed to analyze image. Please try again.';
 		}
 	} finally {
 		isLoading.value = false;
@@ -192,9 +186,9 @@ const submitLabel = async (label: string) => {
 		console.error('Training error:', error);
 		const err = e as Error;
 		if (err.name === 'TypeError' && err.message.includes('Load failed')) {
-			error.value = 'Backend service unavailable. Please try again later.';
+			error.value = 'ERROR: Backend service unavailable. Please try again later.';
 		} else {
-			error.value = 'Failed to submit training data. Please try again.';
+			error.value = 'ERROR: Failed to submit training data. Please try again.';
 		}
 	} finally {
 		isLoading.value = false;
@@ -211,10 +205,12 @@ const reset = () => {
 };
 
 const retry = () => {
+	error.value = null;
 	if (mode.value === 'predict' && capturedData.value) {
 		sendPrediction(capturedData.value.canvas);
-	} else {
-		error.value = null;
+	} else if (mode.value === 'train') {
+		// For training mode, just clear the error and let user retake photo
+		// The camera component will handle showing the capture button again
 	}
 };
 
@@ -348,8 +344,7 @@ html {
 	box-shadow: 0 2px 10px rgba(198, 40, 40, 0.3);
 }
 
-.retake-btn,
-.retry-btn {
+.retake-btn {
 	padding: 8px 16px;
 	background: #6c757d;
 	color: white;
@@ -358,15 +353,6 @@ html {
 	cursor: pointer;
 	transition: all 0.3s ease;
 	min-height: 44px;
-}
-
-.error-container {
-	margin: 20px 0;
-	padding: 15px;
-	background: linear-gradient(135deg, #f8d7da, #f5c6cb);
-	color: #721c24;
-	border: 2px solid #f5c6cb;
-	border-radius: 15px;
 }
 
 .success-container {
