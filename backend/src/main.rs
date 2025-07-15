@@ -10,6 +10,7 @@ use std::fs;
 use std::path::Path;
 use serde_json::{json, Value};
 use actix_web::{http};
+use regex::Regex;
 
 use request_logger::RequestLogger;
 
@@ -289,38 +290,15 @@ async fn predict_image_route(payload: Multipart) -> rusty_api::HttpResponse {
 
 /// Parse the output from predict.py script into a structured JSON response
 fn parse_prediction_output(output: &str) -> Value {
-    let lines: Vec<&str> = output.lines().collect();
     let mut prediction = "unknown";
     let mut confidence = 0.0;
-
-    // Parse the prediction output - new format: "Prediction: {label}; Confidence: {confidence:.4f}"
-    for line in lines {
-        if line.contains("Prediction:") && line.contains("Confidence:") {
-            // Extract prediction label
-            if let Some(pred_start) = line.find("Prediction: ") {
-                let after_pred = &line[pred_start + 12..];
-                if let Some(pred_end) = after_pred.find(';') {
-                    let pred_str = after_pred[..pred_end].trim();
-                    if pred_str == "match_ready" || pred_str == "not_match_ready" {
-                        prediction = pred_str;
-                    }
-                }
-            }
-            
-            // Extract confidence value
-            if let Some(conf_start) = line.find("Confidence: ") {
-                let conf_str = &line[conf_start + 12..];
-                if let Ok(conf) = conf_str.trim().parse::<f64>() {
-                    confidence = conf;
-                }
-            }
-        }
+    // Expect output like: "Prediction: match_ready; Confidence: 0.9876"
+    let re = Regex::new(r"Prediction:\s*(match_ready|not_match_ready);\s*Confidence:\s*([0-9.]+)").unwrap();
+    if let Some(caps) = re.captures(output) {
+        prediction = caps.get(1).map_or("unknown", |m| m.as_str());
+        confidence = caps.get(2).and_then(|m| m.as_str().parse::<f64>().ok()).unwrap_or(0.0);
     }
-
-    json!({
-        "prediction": prediction,
-        "confidence": confidence
-    })
+    json!({ "prediction": prediction, "confidence": confidence })
 }
 
 /// Entrypoint: sets up API routes, TLS, CORS, and starts the server.

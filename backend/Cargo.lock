@@ -12,6 +12,7 @@ dependencies = [
  "chrono",
  "futures-util",
  "log",
+ "regex",
  "rusty-api",
  "serde_json",
  "simplelog",
