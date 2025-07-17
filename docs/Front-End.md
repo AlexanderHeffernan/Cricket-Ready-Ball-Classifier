@@ -1,10 +1,3 @@
----
-id: ulkcc4ab2ws3yjh7zb56tyv
-title: Front-End
-desc: ''
-updated: 1751589961652
-created: 1751556253136
----
 ## Overview
 
 The front-end of the Cricket-Ready Ball Classifier project is a web-app interface that allows users to upload images of cricket balls and receive predictions on whether the ball is match-ready or not. The interface is designed to be user-friendly and responsive, providing immediate feedback based on the uploaded image. It communicates with the back-end API to send the image data and receive the prediction results, which include the classification of the ball and the confidence level of the prediction.

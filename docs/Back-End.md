@@ -1,10 +1,3 @@
----
-id: 87ckbw69y6e172qqi1z029t
-title: Back-End
-desc: ''
-updated: 1751614737012
-created: 1751613762926
----
 ## Overview
 
 The back-end of the Cricket-Ready Ball Classifier project is responsible for processing image uploads, running predictions using a pre-trained ensemble model, and returning the results to the front-end. It is built using Rust, and runs the pre-trained model with python and extracting the output.

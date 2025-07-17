@@ -1,10 +1,3 @@
----
-id: jwyydk5jqo1783ydre25555
-title: Development Phases
-desc: ''
-updated: 1751589691561
-created: 1751558016734
----
 ## Phase 1: Core Functionality
 - [x] Backend API working
 - [x] Vue project created
