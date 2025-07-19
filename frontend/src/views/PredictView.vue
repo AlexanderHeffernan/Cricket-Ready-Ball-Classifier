@@ -204,8 +204,9 @@ const reset = () => {
 	camera.value?.reset();
 };
 
-const retry = () => {
+const retry = async () => {
 	error.value = null;
+	await new Promise(resolve => setTimeout(resolve, 500));
 	if (mode.value === 'predict' && capturedData.value) {
 		sendPrediction(capturedData.value.canvas);
 	} else if (mode.value === 'train') {

@@ -7,15 +7,13 @@
 
 			<div v-if="capturedImageSrc" class="captured-overlay">
 				<img :src="capturedImageSrc" alt="Captured Image" class="captured-image-overlay">
-				<div v-if="isLoading" class="loading-overlay">
-					<LoadingAnimation/>
-				</div>
 			</div>
 
-			<div v-if="localError" class="error-overlay" :class="{ 'error-animate': showErrorAnimation }">
-				<div class="error-content">
+			<div class="overlay" :class="{ 'loading': isLoading, 'error': error }">
+				<LoadingAnimation v-if="isLoading"/>
+				<div v-if="error" class="error-content">
 					<div class="error-icon">❌</div>
-					<p class="error-message">{{ localError }}</p>
+					<p class="error-message">{{ error }}</p>
 				</div>
 			</div>
 
@@ -63,36 +61,6 @@ const cameraStream = ref<HTMLVideoElement>();
 const cameraCanvas = ref<HTMLCanvasElement>();
 const capturedImageSrc = ref<string | null>(null);
 const currentStream = ref<MediaStream | null>(null);
-const showErrorAnimation = ref(false);
-const localError = ref<string | null>(null);
-const errorFadeOutTimeout = ref<number | null>(null);
-
-// Watch for error changes to trigger animation with proper fade out
-watch(() => props.error, (newError: string | null | undefined) => {
-	// Clear any pending fade out timeout
-	if (errorFadeOutTimeout.value) {
-		clearTimeout(errorFadeOutTimeout.value);
-		errorFadeOutTimeout.value = null;
-	}
-
-	if (newError) {
-		// Set local error immediately
-		localError.value = newError;
-		// Reset animation state
-		showErrorAnimation.value = false;
-		// Use setTimeout to ensure DOM element is rendered first
-		setTimeout(() => {
-			showErrorAnimation.value = true;
-		}, 50);
-	} else {
-		// Start fade out animation but keep local error
-		showErrorAnimation.value = false;
-		// Clear local error after fade out completes
-		errorFadeOutTimeout.value = setTimeout(() => {
-			localError.value = null;
-		}, 700); // Match the transition duration
-	}
-});
 
 onMounted(() => {
 	initializeCamera();
@@ -183,9 +151,6 @@ const reset = () => {
 
 onUnmounted(() => {
 	currentStream.value?.getTracks().forEach(track => track.stop());
-	if (errorFadeOutTimeout.value) {
-		clearTimeout(errorFadeOutTimeout.value);
-	}
 })
 
 defineExpose({ reset });
@@ -341,61 +306,43 @@ defineExpose({ reset });
 	}
 }
 
-.loading-overlay {
+.overlay {
 	position: absolute;
 	top: 0;
 	left: 0;
 	right: 0;
 	bottom: 0;
-	background: rgba(255, 255, 255, 0.5);
 	backdrop-filter: blur(8px);
 	border-radius: 50%;
 	display: flex;
 	align-items: center;
 	justify-content: center;
 	z-index: 30;
+	background: rgba(255, 255, 255, 1);
+	opacity: 0;
+	transform: scale(0.5) rotate(-15deg);
+	transition: all 0.7s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+.overlay.loading {
+	background: rgba(255, 255, 255, 0.5);
 	opacity: 1;
+	transform: scale(1) rotate(0deg);
 }
 
-.error-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(220, 53, 69, 0.7);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 30;
-  opacity: 0;
-  transform: scale(0.5) rotate(-15deg);
-  backdrop-filter: blur(8px);
-  transition: all 0.7s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-  box-shadow: 0 0 0 rgba(220, 53, 69, 0.4);
-}
-
-.error-overlay.error-animate {
-  opacity: 1;
-  transform: scale(1) rotate(0deg);
-  box-shadow: 0 0 50px rgba(220, 53, 69, 0.6), 
-              0 0 100px rgba(220, 53, 69, 0.3),
-              inset 0 0 50px rgba(255, 255, 255, 0.1);
+.overlay.error {
+	background: rgba(220, 53, 69, 0.7);
+	opacity: 1;
+	transform: scale(1) rotate(0deg);
+	z-index: 40;
 }
 
 .error-content {
   text-align: center;
   padding: 20px;
   max-width: 280px;
-  transform: translateY(30px) scale(0.7);
-  opacity: 0;
-  transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.2s;
-}
-
-.error-overlay.error-animate .error-content {
-  transform: translateY(0) scale(1);
   opacity: 1;
+  transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.2s;
 }
 
 .error-message {
