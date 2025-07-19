@@ -164,10 +164,9 @@ defineExpose({ reset });
 }
 
 #camera-stream {
-	width: 100%;
-	max-width: 400px;
+	width: 400px;
 	aspect-ratio: 1/1;
-	border: 4px solid #795548;
+	border: 4px solid white;
 	border-radius: 50%;
 	object-fit: cover;
 	box-shadow: 0 0 20px rgba(121, 85, 72, 0.3);
