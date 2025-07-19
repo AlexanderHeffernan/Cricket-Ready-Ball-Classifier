@@ -1,10 +1,59 @@
 <template>
-  <div class="background-image"></div>
-  <div class="background-overlay"></div>
-  <div class="app-container">
-    <router-view/>
-  </div>
+	<div>
+		<transition name="fade">
+			<div v-if="!isImageLoaded" class="loading-overlay">
+                <LoadingAnimation/>
+            </div>
+        </transition>
+		<div class="background-image"></div>
+		<div class="background-overlay"></div>
+		<div class="app-container">
+			<router-view v-on:camera-ready="onCameraReady"/>
+		</div>
+	</div>
 </template>
+
+<script setup lang="ts">
+import LoadingAnimation from '@/components/LoadingAnimation.vue';
+import { ref, onMounted } from 'vue';
+import backgroundImg from '@/assets/background.jpg';
+
+const imageReady = ref(false);
+const cameraReady = ref(false);
+const isImageLoaded = ref(false);
+
+function checkLoadingDone() {
+  if (imageReady.value && cameraReady.value) {
+    isImageLoaded.value = true;
+    document.documentElement.style.setProperty('--background-img', `url(${backgroundImg})`);
+  }
+}
+
+function onCameraReady() {
+  cameraReady.value = true;
+  checkLoadingDone();
+}
+
+onMounted(() => {
+  // Load background image
+  const img = new window.Image();
+  img.src = backgroundImg;
+  img.onload = () => {
+    imageReady.value = true;
+    checkLoadingDone();
+  };
+  // Try to access the camera
+  navigator.mediaDevices.getUserMedia({ video: true })
+    .then(() => {
+      // Don't set cameraReady here!
+      // Wait for the camera component to emit "ready"
+    })
+    .catch(() => {
+      cameraReady.value = true; // If camera fails, still proceed
+      checkLoadingDone();
+    });
+});
+</script>
 
 <style>
 :root {
@@ -23,6 +72,19 @@ html, body {
   min-height: 100dvh;
 }
 
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(255, 255, 255, 1);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
 /* Fixed background image using a div instead of CSS background */
 .background-image {
   position: fixed;
@@ -31,7 +93,7 @@ html, body {
   width: 100%;
   height: 100vh;
   height: 100lvh;
-  background-image: url('./assets/background.jpg');
+  background-image: var(--background-img);;
   background-size: cover;
   background-position: center center;
   background-repeat: no-repeat;
@@ -71,5 +133,15 @@ p {
   color: #333;
   text-align: center;
   margin: 10px 0;
+}
+
+.fade-enter-active, .fade-leave-active {
+  transition: opacity 0.6s cubic-bezier(.4,0,.2,1);
+}
+.fade-enter-from, .fade-leave-to {
+  opacity: 0;
+}
+.fade-enter-to, .fade-leave-from {
+  opacity: 1;
 }
 </style>

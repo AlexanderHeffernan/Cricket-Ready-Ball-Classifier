@@ -55,6 +55,7 @@ const emit = defineEmits<{
 	captured: [canvas: HTMLCanvasElement, imageDataUrl: string];
 	error: [message: string];
 	retry: [];
+	ready: []; // Add this line
 }>();
 
 const cameraStream = ref<HTMLVideoElement>();
@@ -63,8 +64,13 @@ const capturedImageSrc = ref<string | null>(null);
 const currentStream = ref<MediaStream | null>(null);
 
 onMounted(() => {
-	initializeCamera();
-})
+  initializeCamera();
+  if (cameraStream.value) {
+    cameraStream.value.addEventListener('playing', () => {
+      emit('ready');
+    });
+  }
+});
 
 const initializeCamera = async () => {
 	try {

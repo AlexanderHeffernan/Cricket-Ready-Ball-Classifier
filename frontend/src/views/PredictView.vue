@@ -13,7 +13,7 @@
 		<p>{{ modeDescription }}</p>
 
 		<CameraComponent :is-loading="isLoading" :loading-text="loadingText" :glow-class="glowClass" :error="error" :show-retry="!!error"
-			@captured="handleCapture" @error="handleError" @retry="retry" ref="camera" />
+			@captured="handleCapture" @error="handleError" @retry="retry" @ready="emitCameraReady" ref="camera" />
 
 		<!-- Prediction Results -->
 		<div v-if="mode === 'predict' && predictionResult" class="result-container" ref="resultContainer">
@@ -56,11 +56,17 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick } from 'vue';
+import { ref, computed, nextTick, defineEmits } from 'vue';
 import CameraComponent from '@/components/CameraComponent.vue';
 
 type Mode = 'predict' | 'train';
 type PredictionResult = { prediction: 'match_ready' | 'not_match_ready', confidence: number };
+
+const emit = defineEmits(['camera-ready', /* other events */]);
+
+function emitCameraReady() {
+	emit('camera-ready');
+}
 
 const mode = ref<Mode>('predict');
 const isLoading = ref(false);
@@ -233,6 +239,7 @@ html {
 	padding: 20px;
 	text-align: center;
 	min-height: 100vh;
+	box-sizing: border-box;
 }
 
 .mode-selector {
