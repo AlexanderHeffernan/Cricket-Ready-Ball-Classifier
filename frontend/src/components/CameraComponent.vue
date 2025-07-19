@@ -7,9 +7,8 @@
 
 			<div v-if="capturedImageSrc" class="captured-overlay">
 				<img :src="capturedImageSrc" alt="Captured Image" class="captured-image-overlay">
-				<div v-if="isLoading" class="loading-spinner">
-					<div class="spinner"></div>
-					<p>{{ loadingText }}</p>
+				<div v-if="isLoading" class="loading-overlay">
+					<LoadingAnimation/>
 				</div>
 			</div>
 
@@ -38,6 +37,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue';
+import LoadingAnimation from './LoadingAnimation.vue';
 
 interface Props {
 	isLoading?: boolean;
@@ -237,38 +237,6 @@ defineExpose({ reset });
 	object-fit: cover;
 }
 
-.loading-spinner {
-	position: absolute;
-	top: 50%;
-	left: 50%;
-	transform: translate(-50%, -50%);
-	color: white;
-	text-align: center;
-	background: rgba(0, 0, 0, 0.6);
-	padding: 20px;
-	border-radius: 10px;
-}
-
-.spinner {
-	width: 40px;
-	height: 40px;
-	border: 4px solid rgba(255, 255, 255, 0.3);
-	border-top: 4px solid white;
-	border-radius: 50%;
-	animation: spin 1s linear infinite;
-	margin: 0 auto 10px;
-}
-
-@keyframes spin {
-	0% {
-		transform: rotate(0deg);
-	}
-
-	100% {
-		transform: rotate(360deg);
-	}
-}
-
 .glow-effect {
 	position: absolute;
 	top: -8px;
@@ -371,6 +339,22 @@ defineExpose({ reset });
 	#camera-stream {
 		max-width: 350px;
 	}
+}
+
+.loading-overlay {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background: rgba(255, 255, 255, 0.5);
+	backdrop-filter: blur(8px);
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 30;
+	opacity: 1;
 }
 
 .error-overlay {
