@@ -84,6 +84,10 @@ html, body {
   z-index: 1000;
 }
 
+.loading-overlay.complete {
+  pointer-events: none;
+}
+
 .loading-overlay .loading-icon {
 	opacity: 1;
 	transition: opacity 0.5s ease;
