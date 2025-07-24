@@ -12,8 +12,8 @@
 		<h1>{{ mode === 'predict' ? 'Is your ball Cricket-Ready?' : 'Training Tool' }}</h1>
 		<p>{{ modeDescription }}</p>
 
-		<CameraComponent :is-loading="isLoading" :loading-text="loadingText" :glow-class="glowClass" :error="error" :show-retry="!!error"
-			@captured="handleCapture" @error="handleError" @retry="retry" @ready="emitCameraReady" ref="camera" />
+		<CameraComponent :is-loading="isLoading" :glow-class="glowClass" :error="error" :show-retry="!!error"
+			@captured="handleCapture" @cameraError="handleError" @retry="retry" @ready="emitCameraReady" ref="camera" />
 
 		<!-- Prediction Results -->
 		<div v-if="mode === 'predict' && predictionResult" class="result-container" ref="resultContainer">
@@ -81,10 +81,6 @@ const modeDescription = computed(() =>
 	mode.value === 'predict'
 		? 'Take a photo and we will determine if your ball is match ready.'
 		: 'Help improve our classifier by taking photos and labeling them.'
-);
-
-const loadingText = computed(() =>
-	mode.value === 'predict' ? 'Analyzing...' : 'Submitting...'
 );
 
 const glowClass = computed(() => {
