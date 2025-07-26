@@ -1,2 +1,0 @@
-# Welcome
-This is the root document of the Cricket-Ready Ball Classifier Dendron vault. It serves as the main entry point for your notes and documentation related to the Cricket-Ready Ball Classifier project. You are able to read the documenttion without having to install Dendron locally, though it may be more convenient to do so.
