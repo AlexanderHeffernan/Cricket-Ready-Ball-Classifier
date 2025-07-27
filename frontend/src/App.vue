@@ -194,6 +194,7 @@ p {
 	gap: 10px;
 	justify-content: center;
 	margin-bottom: 20px;
+	margin-top: 20px;
 }
 
 .mode-selector .mode-link {
