@@ -1,5 +1,5 @@
 <template>
-	<div class="predict-view">
+	<div class="view">
 		<h1>Is your ball Cricket-Ready?</h1>
 		<p>Take a photo and we will determine if your ball is match ready.</p>
 
@@ -7,7 +7,7 @@
 			@captured="handleCapture" @cameraError="handleError" @retry="retry" @ready="emitCameraReady" ref="camera" />
 
 		<!-- Prediction Results -->
-		<div v-if="predictionResult" class="result-container" ref="resultContainer">
+		<div v-if="predictionResult" class="container" ref="resultContainer">
 			<h2>Result:</h2>
 			<div class="prediction-result">
 				<p class="prediction-text" :class="predictionResult.prediction">
@@ -18,8 +18,8 @@
 				</p>
 			</div>
 			<div class="action-buttons">
-				<button @click="reset" class="action-btn primary">Take Another Photo</button>
-				<button @click="retryPrediction" class="action-btn secondary">Retry Analysis</button>
+				<button @click="reset" class="btn positive">Take Another Photo</button>
+				<button @click="retryPrediction" class="btn negative">Retry Analysis</button>
 			</div>
 		</div>
 	</div>
@@ -135,41 +135,6 @@ const retryPrediction = () => {
 </script>
 
 <style scoped>
-html {
-	scroll-behavior: smooth;
-}
-
-.predict-view {
-	max-width: 600px;
-	margin: 0 auto;
-	padding: 20px;
-	text-align: center;
-	min-height: 100vh;
-	box-sizing: border-box;
-}
-
-.result-container {
-	margin: 20px 0;
-	padding: 20px;
-	background-color: #f8f9fa;
-	border-radius: 15px;
-	border: 2px solid #dee2e6;
-	box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-	animation: fadeInUp 0.5s ease-out;
-}
-
-@keyframes fadeInUp {
-	from {
-		opacity: 0;
-		transform: translateY(20px);
-	}
-
-	to {
-		opacity: 1;
-		transform: translateY(0);
-	}
-}
-
 .prediction-text {
 	font-size: 20px;
 	font-weight: bold;
@@ -197,57 +162,7 @@ html {
 	flex-wrap: wrap;
 }
 
-.action-btn {
-	padding: 10px 20px;
-	font-size: 14px;
-	font-weight: bold;
-	border: none;
-	border-radius: 25px;
-	cursor: pointer;
-	transition: all 0.3s ease;
-	text-transform: uppercase;
-	letter-spacing: 0.5px;
-	min-height: 44px;
-}
-
-.action-btn.primary {
-	background: linear-gradient(135deg, #4CAF50, #2E7D32);
-	color: white;
-	box-shadow: 0 2px 10px rgba(76, 175, 80, 0.3);
-}
-
-.action-btn.secondary {
-	background: linear-gradient(135deg, #6c757d, #495057);
-	color: white;
-	box-shadow: 0 2px 10px rgba(108, 117, 125, 0.3);
-}
-
-h1 {
-	color: #2E7D32;
-	font-size: 2.5em;
-	margin-bottom: 15px;
-}
-
-p {
-	color: #555;
-	font-size: 1.1em;
-	line-height: 1.6;
-	margin-bottom: 30px;
-}
-
 @media (max-width: 768px) {
-	.predict-view {
-		padding: 15px 25px;
-	}
-
-	h1 {
-		font-size: 1.5em;
-	}
-
-	p {
-		font-size: 1em;
-	}
-
 	.action-buttons {
 		flex-direction: column;
 		align-items: center;
