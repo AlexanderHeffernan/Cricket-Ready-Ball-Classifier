@@ -47,16 +47,6 @@ function onCameraReady() {
   min-height: 100vh;
 }
 
-.fade-enter-active, .fade-leave-active {
-  transition: opacity 0.6s cubic-bezier(.4,0,.2,1);
-}
-.fade-enter-from, .fade-leave-to {
-  opacity: 0;
-}
-.fade-enter-to, .fade-leave-from {
-  opacity: 1;
-}
-
 .mode-selector {
 	display: flex;
 	gap: 10px;
