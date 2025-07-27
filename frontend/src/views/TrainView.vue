@@ -124,6 +124,7 @@ html {
 	box-sizing: border-box;
 }
 
+.label-container,
 .success-container {
 	margin: 20px 0;
 	padding: 20px;
