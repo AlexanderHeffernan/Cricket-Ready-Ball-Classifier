@@ -1,22 +1,13 @@
 <template>
-	<div class="cricket-view">
-		<div class="mode-selector">
-			<button @click="mode = 'predict'" :class="{ active: mode === 'predict' }">
-				Predict
-			</button>
-			<button @click="mode = 'train'" :class="{ active: mode === 'train' }">
-				Train
-			</button>
-		</div>
-
-		<h1>{{ mode === 'predict' ? 'Is your ball Cricket-Ready?' : 'Training Tool' }}</h1>
-		<p>{{ modeDescription }}</p>
+	<div class="predict-view">
+		<h1>Is your ball Cricket-Ready?</h1>
+		<p>Take a photo and we will determine if your ball is match ready.</p>
 
 		<CameraComponent :is-loading="isLoading" :glow-class="glowClass" :error="error" :show-retry="!!error"
 			@captured="handleCapture" @cameraError="handleError" @retry="retry" @ready="emitCameraReady" ref="camera" />
 
 		<!-- Prediction Results -->
-		<div v-if="mode === 'predict' && predictionResult" class="result-container" ref="resultContainer">
+		<div v-if="predictionResult" class="result-container" ref="resultContainer">
 			<h2>Result:</h2>
 			<div class="prediction-result">
 				<p class="prediction-text" :class="predictionResult.prediction">
@@ -31,27 +22,6 @@
 				<button @click="retryPrediction" class="action-btn secondary">Retry Analysis</button>
 			</div>
 		</div>
-
-		<!-- Training Labels -->
-		<div v-if="mode === 'train' && capturedData && !submitted" class="label-container">
-			<h3>Is this ball match-ready?</h3>
-			<div class="label-buttons">
-				<button @click="submitLabel('match_ready')" class="label-btn match-ready">
-					✓ Match Ready
-				</button>
-				<button @click="submitLabel('not_match_ready')" class="label-btn not-match-ready">
-					✗ Not Match Ready
-				</button>
-			</div>
-			<button @click="reset" class="retake-btn">Retake Photo</button>
-		</div>
-
-		<!-- Training Success -->
-		<div v-if="mode === 'train' && submitted" class="success-container">
-			<h3>✓ Thank you!</h3>
-			<p>Your training data has been submitted successfully.</p>
-			<button @click="reset" class="action-btn primary">Take Another Photo</button>
-		</div>
 	</div>
 </template>
 
@@ -59,16 +29,12 @@
 import { ref, computed, nextTick, defineEmits } from 'vue';
 import CameraComponent from '@/components/CameraComponent.vue';
 
-type Mode = 'predict' | 'train';
 type PredictionResult = { prediction: 'match_ready' | 'not_match_ready', confidence: number };
 
-const emit = defineEmits(['camera-ready', /* other events */]);
+const emit = defineEmits(['camera-ready']);
 
-function emitCameraReady() {
-	emit('camera-ready');
-}
+function emitCameraReady() { emit('camera-ready'); }
 
-const mode = ref<Mode>('predict');
 const isLoading = ref(false);
 const error = ref<string | null>(null);
 const predictionResult = ref<PredictionResult | null>(null);
@@ -77,14 +43,8 @@ const capturedData = ref<{ canvas: HTMLCanvasElement, imageDataUrl: string } | n
 const camera = ref<InstanceType<typeof CameraComponent>>();
 const resultContainer = ref<HTMLElement>();
 
-const modeDescription = computed(() =>
-	mode.value === 'predict'
-		? 'Take a photo and we will determine if your ball is match ready.'
-		: 'Help improve our classifier by taking photos and labeling them.'
-);
-
 const glowClass = computed(() => {
-	if (mode.value === 'predict' && predictionResult.value) {
+	if (predictionResult.value) {
 		return predictionResult.value.prediction === 'match_ready' ? 'match-ready' : 'not-match-ready';
 	}
 	return '';
@@ -102,10 +62,7 @@ const scrollToResult = async () => {
 
 const handleCapture = (canvas: HTMLCanvasElement, imageDataUrl: string) => {
 	capturedData.value = { canvas, imageDataUrl };
-
-	if (mode.value === 'predict') {
-		sendPrediction(canvas);
-	}
+	sendPrediction(canvas);
 };
 
 const handleError = (message: string) => {
@@ -153,50 +110,6 @@ const sendPrediction = async (canvas: HTMLCanvasElement) => {
 	}
 };
 
-const submitLabel = async (label: string) => {
-	if (!capturedData.value) return;
-
-	try {
-		isLoading.value = true;
-		error.value = null;
-
-		const blob = await new Promise<Blob>((resolve) => {
-			if (capturedData.value) {
-				capturedData.value.canvas.toBlob((blob) => {
-					if (blob) resolve(blob);
-				}, 'image/jpeg', 0.8);
-			}
-		});
-
-		const formData = new FormData();
-		formData.append('image', blob, 'training-image.jpg');
-		formData.append('label', label);
-
-		const response = await fetch(`${process.env.VUE_APP_BACKEND_URL}/training`, {
-			method: 'POST',
-			headers: {
-				'ngrok-skip-browser-warning': 'true',
-			},
-			body: formData,
-		});
-
-		if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-
-		submitted.value = true;
-
-	} catch (e: unknown) {
-		console.error('Training error:', error);
-		const err = e as Error;
-		if (err.name === 'TypeError' && err.message.includes('Load failed')) {
-			error.value = 'ERROR: Backend service unavailable. Please try again later.';
-		} else {
-			error.value = 'ERROR: Failed to submit training data. Please try again.';
-		}
-	} finally {
-		isLoading.value = false;
-	}
-};
-
 const reset = () => {
 	capturedData.value = null;
 	predictionResult.value = null;
@@ -209,11 +122,8 @@ const reset = () => {
 const retry = async () => {
 	error.value = null;
 	await new Promise(resolve => setTimeout(resolve, 500));
-	if (mode.value === 'predict' && capturedData.value) {
+	if (capturedData.value) {
 		sendPrediction(capturedData.value.canvas);
-	} else if (mode.value === 'train') {
-		// For training mode, just clear the error and let user retake photo
-		// The camera component will handle showing the capture button again
 	}
 };
 
@@ -229,7 +139,7 @@ html {
 	scroll-behavior: smooth;
 }
 
-.cricket-view {
+.predict-view {
 	max-width: 600px;
 	margin: 0 auto;
 	padding: 20px;
@@ -238,40 +148,13 @@ html {
 	box-sizing: border-box;
 }
 
-.mode-selector {
-	display: flex;
-	gap: 10px;
-	justify-content: center;
-	margin-bottom: 20px;
-}
-
-.mode-selector button {
-	padding: 10px 20px;
-	font-size: 16px;
-	font-weight: bold;
-	border: 2px solid #2E7D32;
-	background: white;
-	color: #2E7D32;
-	border-radius: 25px;
-	cursor: pointer;
-	transition: all 0.3s ease;
-}
-
-.mode-selector button.active {
-	background: #2E7D32;
-	color: white;
-}
-
-.result-container,
-.label-container,
-.success-container {
+.result-container {
 	margin: 20px 0;
 	padding: 20px;
 	background-color: #f8f9fa;
 	border-radius: 15px;
 	border: 2px solid #dee2e6;
 	box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-
 	animation: fadeInUp 0.5s ease-out;
 }
 
@@ -307,16 +190,14 @@ html {
 	margin-bottom: 20px;
 }
 
-.action-buttons,
-.label-buttons {
+.action-buttons {
 	display: flex;
 	gap: 10px;
 	justify-content: center;
 	flex-wrap: wrap;
 }
 
-.action-btn,
-.label-btn {
+.action-btn {
 	padding: 10px 20px;
 	font-size: 14px;
 	font-weight: bold;
@@ -329,8 +210,7 @@ html {
 	min-height: 44px;
 }
 
-.action-btn.primary,
-.label-btn.match-ready {
+.action-btn.primary {
 	background: linear-gradient(135deg, #4CAF50, #2E7D32);
 	color: white;
 	box-shadow: 0 2px 10px rgba(76, 175, 80, 0.3);
@@ -340,29 +220,6 @@ html {
 	background: linear-gradient(135deg, #6c757d, #495057);
 	color: white;
 	box-shadow: 0 2px 10px rgba(108, 117, 125, 0.3);
-}
-
-.label-btn.not-match-ready {
-	background: linear-gradient(135deg, #C62828, #b71c1c);
-	color: white;
-	box-shadow: 0 2px 10px rgba(198, 40, 40, 0.3);
-}
-
-.retake-btn {
-	padding: 8px 16px;
-	background: #6c757d;
-	color: white;
-	border: none;
-	border-radius: 20px;
-	cursor: pointer;
-	transition: all 0.3s ease;
-	min-height: 44px;
-}
-
-.success-container {
-	background: linear-gradient(135deg, #e8f5e8, #c8e6c8);
-	color: #2E7D32;
-	border: 2px solid #4CAF50;
 }
 
 h1 {
@@ -379,7 +236,7 @@ p {
 }
 
 @media (max-width: 768px) {
-	.cricket-view {
+	.predict-view {
 		padding: 15px 25px;
 	}
 
@@ -391,14 +248,12 @@ p {
 		font-size: 1em;
 	}
 
-	.action-buttons,
-	.label-buttons {
+	.action-buttons {
 		flex-direction: column;
 		align-items: center;
 	}
 
-	.action-btn,
-	.label-btn {
+	.action-btn {
 		width: 200px;
 	}
 }

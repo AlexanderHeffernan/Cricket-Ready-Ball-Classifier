@@ -8,6 +8,10 @@
 		<div class="background-image"></div>
 		<div class="background-overlay"></div>
 		<div class="app-container">
+			<div class="mode-selector">
+				<RouterLink to="/" class="mode-link" active-class="active">Predict</RouterLink>
+				<RouterLink to="/train" class="mode-link" active-class="active">Train</RouterLink>
+			</div>
 			<router-view v-on:camera-ready="onCameraReady"/>
 		</div>
 	</div>
@@ -23,35 +27,35 @@ const cameraReady = ref(false);
 const isImageLoaded = ref(false);
 
 function checkLoadingDone() {
-  if (imageReady.value && cameraReady.value) {
-    isImageLoaded.value = true;
-    document.documentElement.style.setProperty('--background-img', `url(${backgroundImg})`);
-  }
+	if (imageReady.value && cameraReady.value) {
+		isImageLoaded.value = true;
+		document.documentElement.style.setProperty('--background-img', `url(${backgroundImg})`);
+	}
 }
 
 function onCameraReady() {
-  cameraReady.value = true;
-  checkLoadingDone();
+	cameraReady.value = true;
+	checkLoadingDone();
 }
 
 onMounted(() => {
-  // Load background image
-  const img = new window.Image();
-  img.src = backgroundImg;
-  img.onload = () => {
-    imageReady.value = true;
-    checkLoadingDone();
-  };
-  // Try to access the camera
-  navigator.mediaDevices.getUserMedia({ video: true })
-    .then(() => {
-      // Don't set cameraReady here!
-      // Wait for the camera component to emit "ready"
-    })
-    .catch(() => {
-      cameraReady.value = true; // If camera fails, still proceed
-      checkLoadingDone();
-    });
+	// Load background image
+	const img = new window.Image();
+	img.src = backgroundImg;
+	img.onload = () => {
+		imageReady.value = true;
+		checkLoadingDone();
+	};
+	// Try to access the camera
+	navigator.mediaDevices.getUserMedia({ video: true })
+	.then(() => {
+		// Don't set cameraReady here!
+		// Wait for the camera component to emit "ready"
+	})
+	.catch(() => {
+		cameraReady.value = true; // If camera fails, still proceed
+		checkLoadingDone();
+	});	
 });
 </script>
 
@@ -183,5 +187,30 @@ p {
 }
 .fade-enter-to, .fade-leave-from {
   opacity: 1;
+}
+
+.mode-selector {
+	display: flex;
+	gap: 10px;
+	justify-content: center;
+	margin-bottom: 20px;
+}
+
+.mode-selector .mode-link {
+	padding: 10px 20px;
+	font-size: 16px;
+	font-weight: bold;
+	border: 2px solid #2E7D32;
+	background: white;
+	color: #2E7D32;
+	border-radius: 25px;
+	cursor: pointer;
+	transition: all 0.3s ease;
+	text-decoration: none;
+}
+
+.mode-selector .mode-link.active {
+	background: #2E7D32;
+	color: white;
 }
 </style>
