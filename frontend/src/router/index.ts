@@ -9,13 +9,13 @@ const routes = [
 		component: PredictView
 	},
 	{
-		path: '/predict',
-		redirect: '/'
-	},
-	{
 		path: '/train',
 		name: 'train',
 		component: TrainView
+	},
+	{
+		path: '/:catchAll(.*)',
+		redirect: '/'
 	}
 ];
 
