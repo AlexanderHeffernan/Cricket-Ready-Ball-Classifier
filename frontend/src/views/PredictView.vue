@@ -127,6 +127,7 @@ const retry = async () => {
 };
 
 const retryPrediction = () => {
+	predictionResult.value = null;
 	if (capturedData.value) {
 		sendPrediction(capturedData.value.canvas);
 	}
