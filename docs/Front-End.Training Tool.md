@@ -14,3 +14,14 @@ flowchart TD
     I --> E
     J --> C
 ```
+
+## Implementation
+
+The training tool is implemented in [`TrainView.vue`](../frontend/src/views/TrainView.vue). It allows users to:
+
+- Capture a photo using the camera interface (['CameraComponent.vue'](../frontend/src/components/CameraComponent.vue))
+- Label the image as "match ready" or "not match ready"
+- Submit the labeled image to the backend `/training` endpoint
+- See a success message or error, and retake or submit another photo
+
+The UI provides clear feedback and uses the same responsive design and color scheme as the main prediction interface.

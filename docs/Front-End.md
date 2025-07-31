@@ -94,3 +94,20 @@ graph TB
 - **Secondary Green**: `#4CAF50` (lighter green for buttons)
 - **Accent Red**: `#C62828` (cricket ball red for "not-ready" states)
 - **Background**: `#F8F9FA` (clean off-white)
+
+## Implementation Details
+
+The front-end is implemented using Vue 3 with TypeScript. The main features are organized into the following components:
+
+- **App.vue**: Root component, manages loading overlays and background image.
+- **CameraComponent.vue**: Handles camera access, photo capture, and error states.
+- **LoadingOverlay.vue** & **LoadingAnimation.vue**: Provide animated loading feedback during image processing and page loading.
+- **PredictView.vue**: Main prediction workflow (photo capture, upload, result display).
+- **TrainView.vue**: Training tool for users to label and submit new images for model improvement.
+- **BackgroundImage.vue**: Handles the background image and overlay effects.
+
+Routing is managed with Vue Router, with two main routes:
+- `/` for prediction ([`PredictView.vue`](../frontend/src/views/PredictView.vue))
+- `/train` for the training tool([`TrainView.vue`](../frontend/src/views/TrainView))
+
+Global styles and color scheme are defined in [`global.css`](../frontend/src/styles/global.css).
