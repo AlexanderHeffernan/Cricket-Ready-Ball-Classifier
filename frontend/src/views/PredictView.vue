@@ -8,7 +8,6 @@
 
 		<!-- Prediction Results -->
 		<div v-if="predictionResult" class="container" ref="resultContainer">
-			<h2>Result:</h2>
 			<div class="prediction-result">
 				<p class="prediction-text" :class="predictionResult.prediction">
 					Your ball is: <strong>{{ predictionResult.prediction === 'match_ready' ? 'Match Ready' : 'Not Match Ready' }}</strong>
@@ -138,7 +137,6 @@ const retryPrediction = () => {
 .prediction-text {
 	font-size: 20px;
 	font-weight: bold;
-	margin-bottom: 10px;
 }
 
 .prediction-text.match_ready {
@@ -152,7 +150,7 @@ const retryPrediction = () => {
 .confidence-text {
 	font-size: 16px;
 	color: #666;
-	margin-bottom: 20px;
+	margin-bottom: 10px;
 }
 
 .action-buttons {
@@ -170,6 +168,10 @@ const retryPrediction = () => {
 
 	.action-btn {
 		width: 200px;
+	}
+
+	.prediction-text {
+		font-size: 18px;
 	}
 }
 </style>

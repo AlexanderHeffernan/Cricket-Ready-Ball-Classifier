@@ -45,13 +45,13 @@ function onCameraReady() {
   position: relative;
   z-index: 2;
   min-height: 100vh;
+  overflow-y: auto;
 }
 
 .mode-selector {
 	display: flex;
 	gap: 10px;
 	justify-content: center;
-	margin-bottom: 20px;
 	margin-top: 20px;
 }
 

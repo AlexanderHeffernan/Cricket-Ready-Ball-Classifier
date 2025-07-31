@@ -187,6 +187,7 @@ defineExpose({ reset });
 	display: flex;
 	align-items: center;
 	flex-direction: column;
+	margin-top: 20px;
 }
 
 .camera-container {
@@ -194,7 +195,7 @@ defineExpose({ reset });
 	display: block;
 	margin-bottom: 20px;
 	width: 100%;
-	max-width: 400px;
+	max-width: 300px;
 	aspect-ratio: 1/1;
 	border-radius: 50%;
 }

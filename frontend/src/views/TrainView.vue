@@ -8,7 +8,7 @@
 
         <!-- Training Labels -->
 		<div v-if="capturedData && !submitted" class="container">
-			<h3>Is this ball match-ready?</h3>
+			<p style="font-weight: bold; margin-bottom: 10px;">Is this ball match-ready?</p>
 			<div class="label-buttons">
 				<button @click="submitLabel('match_ready')" class="btn positive">
 					✓ Match Ready
@@ -17,14 +17,14 @@
 					✗ Not Match Ready
 				</button>
 			</div>
-			<button @click="reset" class="btn">Retake Photo</button>
+			<button style="margin-top: 10px;" @click="reset" class="btn">Retake Photo</button>
 		</div>
 
 		<!-- Training Success -->
 		<div v-if="submitted" class="container success-container">
 			<h3>✓ Thank you!</h3>
 			<p>Your training data has been submitted successfully.</p>
-			<button @click="reset" class="btn">Take Another Photo</button>
+			<button style="margin-top: 10px;" @click="reset" class="btn">Take Another Photo</button>
 		</div>
     </div>
 </template>
