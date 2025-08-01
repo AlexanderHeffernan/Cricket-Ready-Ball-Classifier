@@ -1,64 +1,29 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>404 Not Found | Cricket-Ready Ball Classifier</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-        body {
-            background: #F8F9FA;
-            color: #2E7D32;
-            font-family: 'Segoe UI', Arial, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            margin: 0;
+<html lang="">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>Cricket-Ready Ball Classifier</title>
+    <link rel="icon" type="image/png" href="/favicon.png">
+    <script type="text/javascript">
+      (function(l) {
+        if (l.search[1] === '/' ) {
+          var decoded = l.search.slice(1).split('&').map(function(s) { 
+            return s.replace(/~and~/g, '&')
+          }).join('?');
+          window.history.replaceState(null, null,
+              l.pathname.slice(0, -1) + decoded + l.hash
+          );
         }
-        .container {
-            text-align: center;
-            padding: 40px 20px;
-            border-radius: 16px;
-            background: #fff;
-            box-shadow: 0 2px 12px rgba(46, 125, 50, 0.08);
-        }
-        h1 {
-            font-size: 5rem;
-            margin: 0 0 10px 0;
-            color: #C62828;
-        }
-        h2 {
-            margin: 0 0 20px 0;
-            font-size: 2rem;
-            color: #555;
-        }
-        p {
-            color: #555;
-            margin-bottom: 30px;
-        }
-        a {
-            display: inline-block;
-            padding: 10px 24px;
-            background: #2E7D32;
-            color: #fff;
-            border-radius: 25px;
-            text-decoration: none;
-            font-weight: bold;
-            transition: background 0.2s;
-        }
-        a:hover {
-            background: #4CAF50;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>404</h1>
-        <h2>Page Not Found</h2>
-        <p>Sorry, the page you are looking for does not exist.<br>
-            You can return to the app below.</p>
-        <a href="https://alexanderheffernan.github.io/Cricket-Ready-Ball-Classifier/">Go to App</a>
-    </div>
-</body>
+      }(window.location))
+    </script>
+  </head>
+  <body>
+    <noscript>
+      <strong>We're sorry but <%= htmlWebpackPlugin.options.title %> doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
+    </noscript>
+    <div id="app"></div>
+    <!-- built files will be auto injected -->
+  </body>
 </html>
