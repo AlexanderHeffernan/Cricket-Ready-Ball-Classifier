@@ -1,7 +1,7 @@
 <template>
     <div class="last-update-indicator" :class="{ hidden: hidden }">
         <div class="update-text">
-            <span style="font-weight: bold">Last updated:</span> <br/>{{  buildDate  }}
+            <span style="font-weight: bold">Last updated: <span style="font-size:11px;">(NZ time)</span></span> <br/>{{  buildDate  }}
         </div>
         <span class="eye-icon" @click="toggleHidden" title="Hide">
           <!-- Eye icon -->
@@ -63,8 +63,8 @@ function toggleHidden() {
 .last-update-indicator .update-text {
     color: #fff;
     font-size: 13px;
-    width: 130px;
-    max-width: 130px;
+    width: 140px;
+    max-width: 140px;
     transition: max-width 0.3s ease, opacity 0.3s ease, margin 0.3s;
     opacity: 1;
     margin-right: 0;
