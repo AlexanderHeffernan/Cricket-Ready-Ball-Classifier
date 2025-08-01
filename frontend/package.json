@@ -54,7 +54,8 @@
       "defineProps": "readonly",
       "defineEmits": "readonly",
       "defineExpose": "readonly",
-      "withDefaults": "readonly"
+      "withDefaults": "readonly",
+      "__BUILD_DATE__": "readonly"
     },
     "overrides": [
       {

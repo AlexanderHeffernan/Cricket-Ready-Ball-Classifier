@@ -9,12 +9,14 @@
 			</div>
 			<router-view v-on:camera-ready="onCameraReady"/>
 		</div>
+		<LastUpdateIndicator />
 	</div>
 </template>
 
 <script setup lang="ts">
 import LoadingOverlay from '@/components/LoadingOverlay.vue';
 import BackgroundImage from '@/components/BackgroundImage.vue';
+import LastUpdateIndicator from './components/LastUpdateIndicator.vue';
 import { ref } from 'vue';
 
 const imageReady = ref(false);

@@ -9,3 +9,5 @@ declare module '*.jpg' {
 	const src: string;
 	export default src;
 }
+
+declare const __BUILD_DATE__: string;
