@@ -1,3 +1,5 @@
+from image_widget import ImageWidget
+
 import sys
 import os
 import subprocess
@@ -11,41 +13,6 @@ from PyQt5.QtCore import QThread, pyqtSignal, Qt
 from PyQt5.QtGui import QPixmap, QFont
 import json
 import glob
-
-class ImageWidget(QFrame):
-    """Custom widget to displat an image with label and delete button"""
-
-    def __init__(self, image_path, class_name):
-        super().__init__()
-        self.image_path = image_path
-        self.class_name = class_name
-        self.setup_ui()
-
-    def setup_ui(self):
-        self.setFrameStyle(QFrame.Box)
-        self.setMaximumWidth(200)
-        
-        layout = QVBoxLayout()
-        
-        # Image display
-        self.image_label = QLabel()
-        pixmap = QPixmap(self.image_path)
-        if not pixmap.isNull():
-            scaled_pixmap = pixmap.scaled(150, 150, Qt.KeepAspectRatio, Qt.SmoothTransformation)
-            self.image_label.setPixmap(scaled_pixmap)
-        else:
-            self.image_label.setText("Invalid Image")
-        self.image_label.setAlignment(Qt.AlignCenter)
-        
-        # Filename
-        filename = os.path.basename(self.image_path)
-        filename_label = QLabel(filename)
-        filename_label.setWordWrap(True)
-        filename_label.setAlignment(Qt.AlignCenter)
-        
-        layout.addWidget(self.image_label)
-        layout.addWidget(filename_label)
-        self.setLayout(layout)
 
 class CricketBallClassifierGUI(QMainWindow):
     def __init__(self):
@@ -124,7 +91,7 @@ class CricketBallClassifierGUI(QMainWindow):
                      if f.lower().endswith(('.jpg', '.jpeg', '.png'))]
             for i, img in enumerate(images):  # Limit display
                 img_path = os.path.join(match_ready_path, img)
-                widget = ImageWidget(img_path, "match_ready")
+                widget = ImageWidget(img_path)
                 self.match_ready_layout.addWidget(widget, i // 5, i % 5)
 
     def clear_layout(self, layout):
