@@ -3,20 +3,6 @@ from PyQt5.QtGui import QPixmap
 from PyQt5.QtCore import Qt
 import os
 
-def rounded_pixmap(pixmap, radius):
-    size = pixmap.size()
-    mask = QPixmap(size)
-    mask.fill(Qt.transparent)
-    painter = QPainter(mask)
-    painter.setRenderHint(QPainter.Antialiasing)
-    painter.setBrush(QBrush(Qt.white))
-    painter.setPen(Qt.NoPen)
-    painter.drawRoundedRect(QRect(0, 0, size.width(), size.height()), radius, radius)
-    painter.setCompositionMode(QPainter.CompositionMode_SourceIn)
-    painter.drawPixmap(0, 0, pixmap)
-    painter.end()
-    return mask
-
 class ImageWidget(QFrame):
     """
     Custom widget to display an image with its filename.
