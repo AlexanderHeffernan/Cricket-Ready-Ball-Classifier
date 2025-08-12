@@ -18,6 +18,7 @@ try:
     from torch.utils.data import DataLoader, Dataset
     from torchvision import datasets, models, transforms
     from sklearn.model_selection import KFold
+    import argparse
 except ImportError as e:
     print(f"❌ Missing required package: {e}")
     print("💡 Install required packages with:")
@@ -41,12 +42,6 @@ if not os.path.exists(models_dir):
 if not os.path.exists(dataset_dir):
     raise FileNotFoundError(f"Dataset directory '{dataset_dir}' does not exist. Please check the path.")
 
-batch_size = 16         # Number of images processed together
-num_epochs = 15         # How many times to go through the training data
-learning_rate = 0.001   # How fast the model learns (step size)
-num_classes = 2         # Match-ready vs non-match-ready (2 classes)
-k_folds = 3             # Split data into 5 parts for cross-validation
-
 # Use Apple Silicon GPU if available, otherwise CUDA GPU, otherwise CPU
 device = torch.device('mps' if torch.backends.mps.is_available() else 'cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -64,9 +59,28 @@ def set_seed(seed=42):
     torch.backends.cudnn.benchmark = False     # Disable optimization for reproducibility
     os.environ['PYTHONHASHSEED'] = str(seed)   # Python hash seed
 
+def get_args():
+    parser = argparse.ArgumentParser(description="Cricket Ball Classifier Training")
+    parser.add_argument('--batch_size', type=int, default=16, help='Batch size')
+    parser.add_argument('--num_epochs', type=int, default=15, help='Number of epochs')
+    parser.add_argument('--learning_rate', type=float, default=0.001, help='Learning rate')
+    parser.add_argument('--k_folds', type=int, default=3, help='Number of cross-validation folds')
+    parser.add_argument('--patience', type=int, default=5, help='Early stopping patience')
+    parser.add_argument('--seed', type=int, default=42, help='Random seed')
+    return parser.parse_args()
+
+args = get_args()
+
+batch_size = args.batch_size        # Number of images processed together
+num_epochs = args.num_epochs        # How many times to go through the training data
+learning_rate = args.learning_rate  # How fast the model learns (step size)
+num_classes = 2                     # Match-ready vs non-match-ready (2 classes)
+k_folds = args.k_folds              # Split data into 5 parts for cross-validation
+patience = args.patience            # Early stopping patience (how many epochs to wait for improvement)
+
 # Call this before any other operations
-set_seed(42)
-print(f"🎲 Random seed set to 42 for reproducible results")
+set_seed(args.seed)
+print(f"🎲 Random seed set to {args.seed} for reproducible results")
 
 # ----------------------
 # Image Preprocessing Transforms
@@ -284,7 +298,6 @@ for fold_number, (train_indices, test_indices) in enumerate(kfold.split(full_dat
     # Training loop with early stopping
     # ----------------------
     best_test_accuracy = 0.0
-    patience = 5
     patience_counter = 0
 
     for epoch in range(num_epochs):
