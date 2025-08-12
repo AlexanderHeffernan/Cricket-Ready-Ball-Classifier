@@ -141,6 +141,7 @@ class CricketBallClassifierGUI(QMainWindow):
             for i, img in enumerate(images):  # Limit display
                 img_path = os.path.join(match_ready_path, img)
                 widget = ImageWidget(img_path)
+                widget.image_deleted.connect(self.refresh_data)
                 self.match_ready_layout.addWidget(widget, i // 5, i % 5)
 
         # Load not_match_ready images
@@ -151,7 +152,7 @@ class CricketBallClassifierGUI(QMainWindow):
             for i, img in enumerate(images[:20]):  # Limit display
                 img_path = os.path.join(not_ready_path, img)
                 widget = ImageWidget(img_path)
-                # widget.image_deleted.connect(self.refresh_data)
+                widget.image_deleted.connect(self.refresh_data)
                 self.not_ready_layout.addWidget(widget, i // 5, i % 5)
 
     def clear_layout(self, layout):
