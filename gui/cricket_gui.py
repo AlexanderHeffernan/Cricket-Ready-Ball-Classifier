@@ -1,4 +1,5 @@
 from image_widget import ImageWidget
+from training_thread import TrainingThread
 from prediction_thread import PredictionThread
 
 import sys
@@ -42,6 +43,7 @@ class CricketBallClassifierGUI(QMainWindow):
 
         # Create tabs
         self.create_dataset_tab()
+        self.create_training_tab()
         self.create_prediction_tab()
 
     def create_dataset_tab(self):
@@ -111,6 +113,35 @@ class CricketBallClassifierGUI(QMainWindow):
         self.not_ready_scroll.setWidgetResizable(True)
         self.not_ready_scroll.setMaximumHeight(300)
         parent_layout.addWidget(self.not_ready_scroll)
+
+    def create_training_tab(self):
+        """Tab for model training"""
+        training_widget = QWidget()
+        layout = QVBoxLayout()
+        
+        # Header
+        header = QLabel("Model Training")
+        header.setFont(QFont("Arial", 16, QFont.Bold))
+        layout.addWidget(header)
+        
+        # Training button
+        self.train_btn = QPushButton("Start Training")
+        self.train_btn.clicked.connect(self.start_training)
+        self.train_btn.setStyleSheet("QPushButton { background-color: #2e7d32; color: white; font-size: 14px; padding: 10px; }")
+        layout.addWidget(self.train_btn)
+        
+        # Progress bar
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setVisible(False)
+        layout.addWidget(self.progress_bar)
+        
+        # Training output
+        self.training_output = QTextEdit()
+        self.training_output.setReadOnly(True)
+        layout.addWidget(self.training_output)
+        
+        training_widget.setLayout(layout)
+        self.tabs.addTab(training_widget, "Training")
 
     def create_prediction_tab(self):
         """Tab for testing predictions"""
@@ -245,6 +276,38 @@ class CricketBallClassifierGUI(QMainWindow):
             
             QMessageBox.information(self, "Success", f"Uploaded {len(files)} images to {class_name}")
             self.refresh_data()
+
+    def start_training(self):
+        """Start model training in background"""
+        if not os.path.exists(self.nn_classifier_path):
+            QMessageBox.critical(self, "Error", f"nn-classifier directory not found: {self.nn_classifier_path}")
+            return
+        
+        self.train_btn.setEnabled(False)
+        self.progress_bar.setVisible(True)
+        self.progress_bar.setRange(0, 0)  # Indeterminate progress
+        self.training_output.clear()
+        
+        self.training_thread = TrainingThread(self.nn_classifier_path)
+        self.training_thread.progress_update.connect(self.update_training_output)
+        self.training_thread.finished.connect(self.training_finished)
+        self.training_thread.start()
+
+    def update_training_output(self, text):
+        """Update training output display"""
+        self.training_output.append(text)
+        self.training_output.ensureCursorVisible()
+    
+    def training_finished(self, success, message):
+        """Handle training completion"""
+        self.train_btn.setEnabled(True)
+        self.progress_bar.setVisible(False)
+        
+        if success:
+            QMessageBox.information(self, "Success", message)
+            # self.refresh_models_list()
+        else:
+            QMessageBox.critical(self, "Error", message)
 
     def select_prediction_image(self):
         """Select an image for prediction"""
