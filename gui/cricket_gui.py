@@ -1,4 +1,5 @@
 from image_widget import ImageWidget
+from prediction_thread import PredictionThread
 
 import sys
 import os
@@ -41,6 +42,7 @@ class CricketBallClassifierGUI(QMainWindow):
 
         # Create tabs
         self.create_dataset_tab()
+        self.create_prediction_tab()
 
     def create_dataset_tab(self):
         """Tab for viewing and managing training data"""
@@ -109,6 +111,67 @@ class CricketBallClassifierGUI(QMainWindow):
         self.not_ready_scroll.setWidgetResizable(True)
         self.not_ready_scroll.setMaximumHeight(300)
         parent_layout.addWidget(self.not_ready_scroll)
+
+    def create_prediction_tab(self):
+        """Tab for testing predictions"""
+        prediction_widget = QWidget()
+        layout = QVBoxLayout(prediction_widget)
+        layout.setSpacing(16)
+        
+        # Header
+        header = QLabel("Model Testing & Prediction")
+        header.setFont(QFont("Arial", 16, QFont.Bold))
+        layout.addWidget(header)
+        
+        # File selection
+        file_layout = QHBoxLayout()
+        self.selected_file_label = QLabel("No file selected")
+        file_layout.addWidget(self.selected_file_label)
+        
+        select_file_btn = QPushButton("Select Image")
+        select_file_btn.clicked.connect(self.select_prediction_image)
+        file_layout.addWidget(select_file_btn)
+        
+        self.predict_btn = QPushButton("Predict")
+        self.predict_btn.clicked.connect(self.run_prediction)
+        self.predict_btn.setStyleSheet("""
+            QPushButton { 
+                background-color: #4caf50;
+                color: white;
+            }
+
+            QPushButton:disabled {
+                background-color: #888;
+                color: #ccc;
+            }
+        """)
+        self.predict_btn.setEnabled(False)  # Initially disabled
+        file_layout.addWidget(self.predict_btn)
+        
+        layout.addLayout(file_layout)
+
+        # Main preview/results area
+        main_area = QHBoxLayout()
+        main_area.setSpacing(24)
+        
+        # Image preview
+        self.preview_label = QLabel("Image preview will appear here")
+        self.preview_label.setMinimumSize(300, 300)
+        self.preview_label.setAlignment(Qt.AlignCenter)
+        self.preview_label.setStyleSheet("border: 1px solid gray;")
+        main_area.addWidget(self.preview_label, stretch=1)
+        
+        # Results
+        results_text_layout = QVBoxLayout()
+        self.prediction_result = QLabel("Results will appear here")
+        self.prediction_result.setFont(QFont("Arial", 14))
+        results_text_layout.addWidget(self.prediction_result)
+        main_area.addLayout(results_text_layout, stretch=1)
+        
+        layout.addLayout(main_area, stretch=1)
+        
+        prediction_widget.setLayout(layout)
+        self.tabs.addTab(prediction_widget, "Prediction")
 
     def refresh_data(self):
         """Refresh all data displays"""
@@ -182,6 +245,71 @@ class CricketBallClassifierGUI(QMainWindow):
             
             QMessageBox.information(self, "Success", f"Uploaded {len(files)} images to {class_name}")
             self.refresh_data()
+
+    def select_prediction_image(self):
+        """Select an image for prediction"""
+        file_path, _ = QFileDialog.getOpenFileName(
+            self, "Select Image for Prediction", "", "Images (*.jpg *.jpeg *.png)")
+        
+        if file_path:
+            self.selected_file_label.setText(os.path.basename(file_path))
+            self.current_prediction_image = file_path
+            self.show_image_preview(file_path)
+            self.predict_btn.setEnabled(True)  # Enable prediction button
+
+    def test_selected_image(self):
+        """Test the selected image from test_images folder"""
+        selected = self.test_images_combo.currentText()
+        if selected:
+            image_path = os.path.join(self.test_images_path, selected)
+            self.current_prediction_image = image_path
+            self.selected_file_label.setText(selected)
+            self.show_image_preview(image_path)
+            self.run_prediction()
+
+    def show_image_preview(self, image_path):
+        """Show image preview"""
+        pixmap = QPixmap(image_path)
+        if not pixmap.isNull():
+            scaled_pixmap = pixmap.scaled(300, 300, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+            self.preview_label.setPixmap(scaled_pixmap)
+        else:
+            self.preview_label.setText("Invalid Image")
+            self.preview_btn.setEnabled(False)
+
+    def run_prediction(self):
+        """Run prediction on selected image"""
+        self.predict_btn.setEnabled(False)  # Disable button during prediction
+        if not hasattr(self, 'current_prediction_image'):
+            QMessageBox.warning(self, "Warning", "Please select an image first")
+            return
+        
+        if not os.path.exists(self.nn_classifier_path):
+            QMessageBox.critical(self, "Error", f"nn-classifier directory not found: {self.nn_classifier_path}")
+            return
+        
+        self.prediction_result.setText("Running prediction...")
+        
+        self.prediction_thread = PredictionThread(self.nn_classifier_path, self.current_prediction_image)
+        self.prediction_thread.result_ready.connect(self.show_prediction_result)
+        self.prediction_thread.error_occurred.connect(self.show_prediction_error)
+        self.prediction_thread.start()
+
+    def show_prediction_result(self, prediction, image_path, confidence):
+        """Display prediction result"""
+        color = "#2e7d32" if prediction == "match_ready" else "#c62828"
+        result_text = f"""
+        <div style="color: {color}; font-size: 18px; font-weight: bold;">
+        Prediction: {prediction.replace('_', ' ').title()}<br>
+        Confidence: {confidence:.4f} ({confidence*100:.2f}%)
+        </div>
+        """
+        self.prediction_result.setText(result_text)
+    
+    def show_prediction_error(self, error_message):
+        """Display prediction error"""
+        self.prediction_result.setText(f"Error: {error_message}")
+        QMessageBox.critical(self, "Prediction Error", error_message)
 
 def main():
     app = QApplication(sys.argv)
