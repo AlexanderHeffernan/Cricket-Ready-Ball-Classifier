@@ -45,6 +45,7 @@ class CricketBallClassifierGUI(QMainWindow):
         self.create_dataset_tab()
         self.create_training_tab()
         self.create_prediction_tab()
+        self.create_models_tab()
 
     def create_dataset_tab(self):
         """Tab for viewing and managing training data"""
@@ -204,10 +205,28 @@ class CricketBallClassifierGUI(QMainWindow):
         prediction_widget.setLayout(layout)
         self.tabs.addTab(prediction_widget, "Prediction")
 
+    def create_models_tab(self):
+        """Tab for viewing model information"""
+        models_widget = QWidget()
+        layout = QVBoxLayout()
+        
+        # Header
+        header = QLabel("Trained Models")
+        header.setFont(QFont("Arial", 16, QFont.Bold))
+        layout.addWidget(header)
+        
+        # Models list
+        self.models_list = QListWidget()
+        layout.addWidget(self.models_list)
+        
+        models_widget.setLayout(layout)
+        self.tabs.addTab(models_widget, "Models")
+
     def refresh_data(self):
         """Refresh all data displays"""
         self.refresh_dataset_stats()
         self.refresh_image_galleries()
+        self.refresh_models_list()
 
     def refresh_dataset_stats(self):
         """Update dataset statistics"""
@@ -249,6 +268,16 @@ class CricketBallClassifierGUI(QMainWindow):
                 widget.image_deleted.connect(self.refresh_data)
                 self.not_ready_layout.addWidget(widget, i // 5, i % 5)
 
+    def refresh_models_list(self):
+        """Refresh models list"""
+        self.models_list.clear()
+        if os.path.exists(self.models_path):
+            models = [f for f in os.listdir(self.models_path) if f.endswith('.pth')]
+            for model in models:
+                model_path = os.path.join(self.models_path, model)
+                size = os.path.getsize(model_path) / (1024 * 1024)  # MB
+                self.models_list.addItem(f"{model} ({size:.1f} MB)")
+    
     def clear_layout(self, layout):
         """Clear all widgets from a layout"""
         while layout.count():
@@ -305,7 +334,7 @@ class CricketBallClassifierGUI(QMainWindow):
         
         if success:
             QMessageBox.information(self, "Success", message)
-            # self.refresh_models_list()
+            self.refresh_models_list()
         else:
             QMessageBox.critical(self, "Error", message)
 
