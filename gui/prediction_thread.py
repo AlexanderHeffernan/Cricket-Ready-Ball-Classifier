@@ -23,7 +23,7 @@ class PredictionThread(QThread):
                 capture_output=True,
                 text=True
             )
-            print(f"Prediction script output: {result.stdout}")
+            
             if result.returncode == 0:
                 # Parse output: "Prediction: match_ready; Confidence: 0.8542"
                 output = result.stdout.strip()
