@@ -10,7 +10,7 @@ from pathlib import Path
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, QHBoxLayout, 
                             QWidget, QPushButton, QLabel, QFileDialog, QListWidget, 
                             QTabWidget, QTextEdit, QProgressBar, QMessageBox, 
-                            QComboBox, QGridLayout, QScrollArea, QFrame)
+                            QComboBox, QGridLayout, QScrollArea, QFrame, QSpinBox, QDoubleSpinBox)
 from PyQt5.QtCore import QThread, pyqtSignal, Qt
 from PyQt5.QtGui import QPixmap, QFont
 import json
@@ -116,14 +116,48 @@ class CricketBallClassifierGUI(QMainWindow):
         parent_layout.addWidget(self.not_ready_scroll)
 
     def create_training_tab(self):
-        """Tab for model training"""
         training_widget = QWidget()
         layout = QVBoxLayout()
-        
-        # Header
+
         header = QLabel("Model Training")
         header.setFont(QFont("Arial", 16, QFont.Bold))
         layout.addWidget(header)
+
+        # Settings row
+        settings_layout = QHBoxLayout()
+        self.epochs_spin = QSpinBox()
+        self.epochs_spin.setRange(1, 100)
+        self.epochs_spin.setValue(15)
+        self.epochs_spin.setPrefix("Epochs: ")
+        settings_layout.addWidget(self.epochs_spin)
+
+        self.batch_spin = QSpinBox()
+        self.batch_spin.setRange(1, 128)
+        self.batch_spin.setValue(16)
+        self.batch_spin.setPrefix("Batch: ")
+        settings_layout.addWidget(self.batch_spin)
+
+        self.lr_spin = QDoubleSpinBox()
+        self.lr_spin.setRange(0.0001, 1.0)
+        self.lr_spin.setSingleStep(0.0001)
+        self.lr_spin.setValue(0.001)
+        self.lr_spin.setPrefix("LR: ")
+        self.lr_spin.setDecimals(4)
+        settings_layout.addWidget(self.lr_spin)
+
+        self.kfold_spin = QSpinBox()
+        self.kfold_spin.setRange(2, 10)
+        self.kfold_spin.setValue(3)
+        self.kfold_spin.setPrefix("Folds: ")
+        settings_layout.addWidget(self.kfold_spin)
+
+        self.patience_spin = QSpinBox()
+        self.patience_spin.setRange(1, 20)
+        self.patience_spin.setValue(5)
+        self.patience_spin.setPrefix("Patience: ")
+        settings_layout.addWidget(self.patience_spin)
+
+        layout.addLayout(settings_layout)
         
         # Training button
         self.train_btn = QPushButton("Start Training")
