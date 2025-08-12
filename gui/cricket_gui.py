@@ -59,11 +59,11 @@ class CricketBallClassifierGUI(QMainWindow):
         # Upload buttons
         upload_layout = QHBoxLayout()
 
-        upload_match_ready_btn = QPushButton("Upload Match-Ready Image")
+        upload_match_ready_btn = QPushButton("Upload Match-Ready Image(s)")
         upload_match_ready_btn.clicked.connect(lambda: self.upload_images("match_ready"))
         upload_layout.addWidget(upload_match_ready_btn)
 
-        upload_not_ready_btn = QPushButton("Upload Not-Ready Image")
+        upload_not_ready_btn = QPushButton("Upload Not-Ready Image(s)")
         upload_not_ready_btn.clicked.connect(lambda: self.upload_images("not_match_ready"))
         upload_layout.addWidget(upload_not_ready_btn)
 
