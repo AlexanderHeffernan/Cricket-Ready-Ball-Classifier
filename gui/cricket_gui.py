@@ -351,7 +351,17 @@ class CricketBallClassifierGUI(QMainWindow):
         self.progress_bar.setRange(0, 0)  # Indeterminate progress
         self.training_output.clear()
         
-        self.training_thread = TrainingThread(self.nn_classifier_path)
+        # Collect settings
+        settings = {
+            'num_epochs': self.epochs_spin.value(),
+            'batch_size': self.batch_spin.value(),
+            'learning_rate': self.lr_spin.value(),
+            'k_folds': self.kfold_spin.value(),
+            'patience': self.patience_spin.value(),
+            'seed': 42  # You can add a spinbox for this too
+        }
+
+        self.training_thread = TrainingThread(self.nn_classifier_path, settings)
         self.training_thread.progress_update.connect(self.update_training_output)
         self.training_thread.finished.connect(self.training_finished)
         self.training_thread.start()
