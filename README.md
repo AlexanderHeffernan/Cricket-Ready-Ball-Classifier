@@ -73,7 +73,7 @@ chmod +x install-cricket-ready-backend.sh
 Uninstall:
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/AlexanderHeffernan/Cricket-Ready-Ball-Classifier/main/bakend/uninstall-cricket-ready-backend.sh | bash
+curl -sSL https://raw.githubusercontent.com/AlexanderHeffernan/Cricket-Ready-Ball-Classifier/main/backend/uninstall-cricket-ready-backend.sh | bash
 ```
 
 ### 3. Configuration
