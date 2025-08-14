@@ -1,22 +1,34 @@
-import sys
+"""
+PredictionThread: Runs image prediction in a background thread.
+- Uses the project's venv to run predict.py with the selected image.
+- Emits result_ready(prediction: str, image_path: str, confidence: float) on success.
+- Emits error_occurred(error_message: str) on failure.
+"""
+
+import os
 import subprocess
 from PyQt5.QtCore import QThread, pyqtSignal
-import os
 
 class PredictionThread(QThread):
-    """Background thread for single image prediction"""
     result_ready = pyqtSignal(str, str, float)
     error_occurred = pyqtSignal(str)
 
     def __init__(self, script_path, image_path):
+        """
+        Args:
+            script_path (str): Path to the nn-classifier directory.
+            image_path (str): Path to the image file to predict.
+        """
         super().__init__()
         self.script_path = script_path
         self.image_path = image_path
 
     def run(self):
         try:
-            # Run prediction script
+            # Find the venv Python interpreter
             venv_python = os.path.abspath(os.path.join(self.script_path, "venv", "bin", "python3"))
+
+            # Run the prediction script in the nn-classifier directory
             result = subprocess.run(
                 [venv_python, 'nn-classifier/predict.py', self.image_path],
                 cwd=os.path.join(self.script_path, '../'),

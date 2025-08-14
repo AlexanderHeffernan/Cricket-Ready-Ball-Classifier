@@ -5,8 +5,8 @@ import os
 import shutil
 
 from widgets.image_widget import ImageWidget
-from training_thread import TrainingThread
-from prediction_thread import PredictionThread
+from threads.training_thread import TrainingThread
+from threads.prediction_thread import PredictionThread
 
 class CricketBallClassifierGUI(QMainWindow):
     def __init__(self):
