@@ -314,9 +314,9 @@ fn main() {
         .configure_routes(routes)
         .configure_cors(|| {
             rusty_api::Cors::default()
-                .allow_any_method()
-                .allow_any_origin()
-                .allow_any_header()
+                .allowed_origin("https://alexheffernan.dev/Cricket-Ready-Ball-Classifier/")
+                .allowed_methods(vec!["POST"])
+                .allowed_headers(vec!["Content-Type", "Authorization"])
         })
         .start();
 }
