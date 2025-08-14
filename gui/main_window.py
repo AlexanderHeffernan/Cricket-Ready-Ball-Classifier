@@ -1,20 +1,12 @@
+from PyQt5.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QTabWidget, QLabel, QHBoxLayout, QPushButton, QFileDialog, QProgressBar, QTextEdit, QListWidget, QSpinBox, QDoubleSpinBox, QMessageBox, QScrollArea, QGridLayout
+from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QFont, QPixmap
+import os
+import shutil
+
 from image_widget import ImageWidget
 from training_thread import TrainingThread
 from prediction_thread import PredictionThread
-
-import sys
-import os
-import subprocess
-import shutil
-from pathlib import Path
-from PyQt5.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, QHBoxLayout, 
-                            QWidget, QPushButton, QLabel, QFileDialog, QListWidget, 
-                            QTabWidget, QTextEdit, QProgressBar, QMessageBox, 
-                            QComboBox, QGridLayout, QScrollArea, QFrame, QSpinBox, QDoubleSpinBox)
-from PyQt5.QtCore import QThread, pyqtSignal, Qt
-from PyQt5.QtGui import QPixmap, QFont
-import json
-import glob
 
 class CricketBallClassifierGUI(QMainWindow):
     def __init__(self):
@@ -446,18 +438,3 @@ class CricketBallClassifierGUI(QMainWindow):
         """Display prediction error"""
         self.prediction_result.setText(f"Error: {error_message}")
         QMessageBox.critical(self, "Prediction Error", error_message)
-
-def main():
-    app = QApplication(sys.argv)
-    app.setStyle('Fusion')
-
-    # Set application icon and style
-    app.setApplicationName("Cricket Ball Classifier")
-
-    window = CricketBallClassifierGUI()
-    window.show()
-
-    sys.exit(app.exec_())
-
-if __name__ == '__main__':
-    main()
