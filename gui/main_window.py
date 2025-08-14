@@ -4,7 +4,7 @@ from PyQt5.QtGui import QFont, QPixmap
 import os
 import shutil
 
-from image_widget import ImageWidget
+from widgets.image_widget import ImageWidget
 from training_thread import TrainingThread
 from prediction_thread import PredictionThread
 

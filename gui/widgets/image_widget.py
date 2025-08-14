@@ -5,17 +5,23 @@ import os
 
 class ImageWidget(QFrame):
     """
-    Custom widget to display an image with its filename.
+    Custom widget to display an image with its filename and a delete button.
+    Emits image_deleted signal when the image is deleted.
     """
-    image_deleted = pyqtSignal(str)
+    image_deleted = pyqtSignal(str) # Signal emitted with image path when deleted
 
     def __init__(self, image_path):
+        """
+        Args:
+            image_path (str): Path to the image file to display.
+        """
         super().__init__()
         self.image_path = image_path
         self.setup_ui()
 
     def setup_ui(self):
-        # Frame styling for modern look
+        """Initializes the widget layout and appearance."""
+        # Frame styling for dark mode and rounded corners
         self.setFrameStyle(QFrame.Box)
         self.setMaximumWidth(200)
         self.setStyleSheet("""
@@ -37,6 +43,7 @@ class ImageWidget(QFrame):
         self.image_label.setStyleSheet("background: transparent; border: none;")
         pixmap = QPixmap(self.image_path)
         if not pixmap.isNull():
+            # Scale image to fill label, cropping if necessary
             scaled_pixmap = pixmap.scaled(
                 150, 150, 
                 Qt.KeepAspectRatioByExpanding, Qt.SmoothTransformation
@@ -63,14 +70,17 @@ class ImageWidget(QFrame):
         self.setLayout(layout)
 
     def delete_image(self):
-        reply = QMessageBox.question(self, 'Confirm Delete',
-                                    f'Delete {os.path.basename(self.image_path)}?',
-                                    QMessageBox.Yes | QMessageBox.No)
+        """Prompt for confirmation and delete the iamge if confirmed."""
+        reply = QMessageBox.question(
+            self, 'Confirm Delete',
+            f'Delete {os.path.basename(self.image_path)}?',
+            QMessageBox.Yes | QMessageBox.No
+        )
 
         if reply == QMessageBox.Yes:
             try:
                 os.remove(self.image_path)
                 self.image_deleted.emit(self.image_path)
-                self.setParent(None)
+                self.setParent(None) # Remove widget from layout
             except Exception as e:
                 QMessageBox.critical(self, "Error", f"Failed to delete image: {str(e)}")
