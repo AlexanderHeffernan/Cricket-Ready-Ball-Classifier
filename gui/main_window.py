@@ -8,6 +8,11 @@ from widgets.image_widget import ImageWidget
 from threads.training_thread import TrainingThread
 from threads.prediction_thread import PredictionThread
 
+from views.dataset_tab import create_dataset_tab
+from views.training_tab import create_training_tab
+from views.prediction_tab import create_prediction_tab
+from views.models_tab import create_models_tab
+
 class CricketBallClassifierGUI(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -25,7 +30,6 @@ class CricketBallClassifierGUI(QMainWindow):
         # Central widget with tabs
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
-
         layout = QVBoxLayout()
         central_widget.setLayout(layout)
 
@@ -34,219 +38,10 @@ class CricketBallClassifierGUI(QMainWindow):
         layout.addWidget(self.tabs)
 
         # Create tabs
-        self.create_dataset_tab()
-        self.create_training_tab()
-        self.create_prediction_tab()
-        self.create_models_tab()
-
-    def create_dataset_tab(self):
-        """Tab for viewing and managing training data"""
-        dataset_widget = QWidget()
-        layout = QVBoxLayout()
-
-        # Header
-        header = QLabel("Training Dataset Management")
-        header.setFont(QFont("Arial", 16, QFont.Bold))
-        layout.addWidget(header)
-
-        # Stats
-        self.stats_label = QLabel()
-        layout.addWidget(self.stats_label)
-
-        # Upload buttons
-        upload_layout = QHBoxLayout()
-
-        upload_match_ready_btn = QPushButton("Upload Match-Ready Image(s)")
-        upload_match_ready_btn.clicked.connect(lambda: self.upload_images("match_ready"))
-        upload_layout.addWidget(upload_match_ready_btn)
-
-        upload_not_ready_btn = QPushButton("Upload Not-Ready Image(s)")
-        upload_not_ready_btn.clicked.connect(lambda: self.upload_images("not_match_ready"))
-        upload_layout.addWidget(upload_not_ready_btn)
-
-        refresh_btn = QPushButton("Refresh")
-        refresh_btn.clicked.connect(self.refresh_data)
-        upload_layout.addWidget(refresh_btn)
-
-        layout.addLayout(upload_layout)
-
-        # Image galleries
-        self.create_image_galleries(layout)
-
-        dataset_widget.setLayout(layout)
-        self.tabs.addTab(dataset_widget, "Dataset")
-
-    def create_image_galleries(self, parent_layout):
-        """Create scrollable image galleries for each class"""
-
-        # Match Ready Gallery
-        match_ready_label = QLabel("Match Ready Image:")
-        match_ready_label.setFont(QFont("Arial", 14, QFont.Bold))
-        parent_layout.addWidget(match_ready_label)
-
-        self.match_ready_scroll = QScrollArea()
-        self.match_ready_widget = QWidget()
-        self.match_ready_layout = QGridLayout()
-        self.match_ready_widget.setLayout(self.match_ready_layout)
-        self.match_ready_scroll.setWidget(self.match_ready_widget)
-        self.match_ready_scroll.setWidgetResizable(True)
-        self.match_ready_scroll.setMinimumHeight(300)
-        parent_layout.addWidget(self.match_ready_scroll)
-
-        # Not Match Ready Gallery
-        not_ready_label = QLabel("Not-Match-Ready Images:")
-        not_ready_label.setFont(QFont("Arial", 12, QFont.Bold))
-        parent_layout.addWidget(not_ready_label)
-        
-        self.not_ready_scroll = QScrollArea()
-        self.not_ready_widget = QWidget()
-        self.not_ready_layout = QGridLayout()
-        self.not_ready_widget.setLayout(self.not_ready_layout)
-        self.not_ready_scroll.setWidget(self.not_ready_widget)
-        self.not_ready_scroll.setWidgetResizable(True)
-        self.not_ready_scroll.setMaximumHeight(300)
-        parent_layout.addWidget(self.not_ready_scroll)
-
-    def create_training_tab(self):
-        training_widget = QWidget()
-        layout = QVBoxLayout()
-
-        header = QLabel("Model Training")
-        header.setFont(QFont("Arial", 16, QFont.Bold))
-        layout.addWidget(header)
-
-        # Settings row
-        settings_layout = QHBoxLayout()
-        self.epochs_spin = QSpinBox()
-        self.epochs_spin.setRange(1, 100)
-        self.epochs_spin.setValue(15)
-        self.epochs_spin.setPrefix("Epochs: ")
-        settings_layout.addWidget(self.epochs_spin)
-
-        self.batch_spin = QSpinBox()
-        self.batch_spin.setRange(1, 128)
-        self.batch_spin.setValue(16)
-        self.batch_spin.setPrefix("Batch: ")
-        settings_layout.addWidget(self.batch_spin)
-
-        self.lr_spin = QDoubleSpinBox()
-        self.lr_spin.setRange(0.0001, 1.0)
-        self.lr_spin.setSingleStep(0.0001)
-        self.lr_spin.setValue(0.001)
-        self.lr_spin.setPrefix("LR: ")
-        self.lr_spin.setDecimals(4)
-        settings_layout.addWidget(self.lr_spin)
-
-        self.kfold_spin = QSpinBox()
-        self.kfold_spin.setRange(2, 10)
-        self.kfold_spin.setValue(3)
-        self.kfold_spin.setPrefix("Folds: ")
-        settings_layout.addWidget(self.kfold_spin)
-
-        self.patience_spin = QSpinBox()
-        self.patience_spin.setRange(1, 20)
-        self.patience_spin.setValue(5)
-        self.patience_spin.setPrefix("Patience: ")
-        settings_layout.addWidget(self.patience_spin)
-
-        layout.addLayout(settings_layout)
-        
-        # Training button
-        self.train_btn = QPushButton("Start Training")
-        self.train_btn.clicked.connect(self.start_training)
-        self.train_btn.setStyleSheet("QPushButton { background-color: #2e7d32; color: white; font-size: 14px; padding: 10px; }")
-        layout.addWidget(self.train_btn)
-        
-        # Progress bar
-        self.progress_bar = QProgressBar()
-        self.progress_bar.setVisible(False)
-        layout.addWidget(self.progress_bar)
-        
-        # Training output
-        self.training_output = QTextEdit()
-        self.training_output.setReadOnly(True)
-        layout.addWidget(self.training_output)
-        
-        training_widget.setLayout(layout)
-        self.tabs.addTab(training_widget, "Training")
-
-    def create_prediction_tab(self):
-        """Tab for testing predictions"""
-        prediction_widget = QWidget()
-        layout = QVBoxLayout(prediction_widget)
-        layout.setSpacing(16)
-        
-        # Header
-        header = QLabel("Model Testing & Prediction")
-        header.setFont(QFont("Arial", 16, QFont.Bold))
-        layout.addWidget(header)
-        
-        # File selection
-        file_layout = QHBoxLayout()
-        self.selected_file_label = QLabel("No file selected")
-        file_layout.addWidget(self.selected_file_label)
-        
-        select_file_btn = QPushButton("Select Image")
-        select_file_btn.clicked.connect(self.select_prediction_image)
-        file_layout.addWidget(select_file_btn)
-        
-        self.predict_btn = QPushButton("Predict")
-        self.predict_btn.clicked.connect(self.run_prediction)
-        self.predict_btn.setStyleSheet("""
-            QPushButton { 
-                background-color: #4caf50;
-                color: white;
-            }
-
-            QPushButton:disabled {
-                background-color: #888;
-                color: #ccc;
-            }
-        """)
-        self.predict_btn.setEnabled(False)  # Initially disabled
-        file_layout.addWidget(self.predict_btn)
-        
-        layout.addLayout(file_layout)
-
-        # Main preview/results area
-        main_area = QHBoxLayout()
-        main_area.setSpacing(24)
-        
-        # Image preview
-        self.preview_label = QLabel("Image preview will appear here")
-        self.preview_label.setMinimumSize(300, 300)
-        self.preview_label.setAlignment(Qt.AlignCenter)
-        self.preview_label.setStyleSheet("border: 1px solid gray;")
-        main_area.addWidget(self.preview_label, stretch=1)
-        
-        # Results
-        results_text_layout = QVBoxLayout()
-        self.prediction_result = QLabel("Results will appear here")
-        self.prediction_result.setFont(QFont("Arial", 14))
-        results_text_layout.addWidget(self.prediction_result)
-        main_area.addLayout(results_text_layout, stretch=1)
-        
-        layout.addLayout(main_area, stretch=1)
-        
-        prediction_widget.setLayout(layout)
-        self.tabs.addTab(prediction_widget, "Prediction")
-
-    def create_models_tab(self):
-        """Tab for viewing model information"""
-        models_widget = QWidget()
-        layout = QVBoxLayout()
-        
-        # Header
-        header = QLabel("Trained Models")
-        header.setFont(QFont("Arial", 16, QFont.Bold))
-        layout.addWidget(header)
-        
-        # Models list
-        self.models_list = QListWidget()
-        layout.addWidget(self.models_list)
-        
-        models_widget.setLayout(layout)
-        self.tabs.addTab(models_widget, "Models")
+        self.tabs.addTab(create_dataset_tab(self), "Dataset")
+        self.tabs.addTab(create_training_tab(self), "Training")
+        self.tabs.addTab(create_prediction_tab(self), "Prediction")
+        self.tabs.addTab(create_models_tab(self), "Models")
 
     def refresh_data(self):
         """Refresh all data displays"""
