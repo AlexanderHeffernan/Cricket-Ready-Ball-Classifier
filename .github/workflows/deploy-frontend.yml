@@ -7,13 +7,21 @@ on:
       - 'frontend/**'
       - '.github/workflows/deploy-frontend.yml'
 
+permissions:
+  contents: read
+
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pages: write
     concurrency: ci-${{github.ref}}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - name: Configure Node
         uses: actions/setup-node@v7
@@ -31,4 +39,11 @@ jobs:
         with:
           folder: frontend/dist
           branch: gh-pages
-          token: ${{ secrets.GH_PAGES }}
+          token: ${{ github.token }}
+          force: false
+
+      # GITHUB_TOKEN pushes do not automatically trigger legacy branch-based Pages builds.
+      - name: Request Pages build
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api --method POST "repos/${{ github.repository }}/pages/builds"
