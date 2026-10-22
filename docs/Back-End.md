@@ -6,7 +6,7 @@ The back-end powers the Cricket-Ready Ball Classifier web application, providing
 
 ## Technology Stack
 
-- **Rust**: Main API server (using [`rusty-api`](https://github.com/AlexanderHeffernan/rusty-api))
+- **Rust**: Main API server using Actix directly (configuration owned by this repository)
 - **Python**: Neural network classifier (PyTorch, torchvision)
 
 ---
@@ -19,18 +19,25 @@ The back-end powers the Cricket-Ready Ball Classifier web application, providing
     chmod +x install-cricket-ready-backend.sh
     ./install-cricket-ready-backend.sh
     ```
-    - Downloads the back-end binary, Python scripts, and models
+    - Builds the Rust sources with Cargo; downloads Python scripts and models
+    - Requires a current Rust toolchain, OpenSSL development headers and Python >=3.11
     - Setups up Python virtual environment and installs dependencies
     - Generates TLS certificates if needed
     - Configures and starts a systemd service
 
 2. **Access the API:**
-    - Default port: `49160`
-    - Endpoints: `/predict`, `/train`
+    - Default port: `49161`
+    - Endpoints: `/predict`, `/training`
     - TLS enabled by default
 
 3. **Logs:**
-    - API requests: `backend.log`
+    - API requests and diagnostics: service stderr/journal
+
+See [Security and operations](Back-End.Security.md) before deploying. Public
+contributions now require review in an expiring quarantine. A non-root,
+resource-limited container recipe with persistent storage is provided in
+`backend/compose.yaml`; adopting it and migrating existing data require separate
+deployment approval.
 
 ---
 

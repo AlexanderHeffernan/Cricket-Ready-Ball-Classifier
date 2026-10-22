@@ -1,0 +1,40 @@
+name: Security regression checks
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - run: rustup update stable && rustup default stable && rustup component add rustfmt clippy
+      - run: cargo fmt --check && cargo clippy --all-targets --locked -- -D warnings && cargo build --locked
+        working-directory: backend
+      - run: |
+          pip install --index-url https://download.pytorch.org/whl/cpu torch==2.14.1 torchvision==0.29.1
+          pip install -r backend/nn-classifier/requirements-inference.txt pip-audit
+          pip-audit
+          pip-audit --no-deps --disable-pip -r backend/nn-classifier/requirements-inference.txt
+          python backend/tests/security.py
+      - run: cargo install cargo-audit --locked && cargo audit
+        working-directory: backend
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci && npm run build && npm run lint -- --no-fix
+      - run: npm audit --omit=dev

@@ -10,7 +10,7 @@ Cricket-Ready Ball Classifier is a full-stack application that helps users deter
 - **Mobile-first front-end**: Responsive Vue.js web app for seamless use on any device.
 - **Training tool**: Users can contribute new labeled images to improve the model.
 - **Desktop GUI**: Manage datasets, train models, and test predictions locally.
-- **Robust back-end**: Rust API server orchestrates image handling and model inference via Python. Built with [`rusty-api`](https://github.com/AlexanderHeffernan/rusty-api).
+- **Robust back-end**: Rust/Actix API server orchestrates bounded image handling and model inference via Python.
 - **Neural network ensemble**: High-accuracy PyTorch models for reliable results.
 - **Easy back-end deployment**: Designed for platforms like Raspberry Pi 5 and cloud hosting.
 - **Open dataset growth**: Community-driven data collection for ongoing model improvement.
@@ -38,7 +38,7 @@ Full documentation is available in the [`docs/`](docs/) folder and is auto-synce
   - Deployed via [GitHub Pages](https://alexanderheffernan.github.io/Cricket-Ready-Ball-Classifier/)
 
 - **Back-End**:
-  - Rust API server (built with [`rusty-api`](https://github.com/AlexanderHeffernan/rusty-api))
+  - Rust/Actix API server (configuration owned by this repository)
   - Handles image uploads, prediction requests, and training data submissions
   - Invokes Python scripts for neural network inference (PyTorch)
   - Exposed securely via Cloudflare Tunnel
@@ -67,6 +67,11 @@ npm run serve
 ```
 
 ### 2. Back-End
+
+Read the [backend security and operations guide](docs/Back-End.Security.md) before
+deploying. Python >=3.11 is required. Public contributions are accepted into a
+quota-limited, seven-day quarantine and require human review before training.
+The installer builds Rust sources; the old prebuilt binary is no longer distributed.
 
 You have two options for running the back-end:
 

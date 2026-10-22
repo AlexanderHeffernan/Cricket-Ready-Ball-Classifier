@@ -14,16 +14,22 @@ echo -e "${GREEN}Starting Cricket-Ready Ball Classifier Backend installation...$
 command -v curl >/dev/null 2>&1 || { echo -e "${RED}curl is required. Please install it (e.g., 'sudo apt install curl').${NC}"; exit 1; }
 command -v openssl >/dev/null 2>&1 || { echo -e "${RED}OpenSSL is required. Please install it (e.g., 'sudo apt install openssl').${NC}"; exit 1; }
 command -v python3 >/dev/null 2>&1 || { echo -e "${RED}Python 3 is required. Please install it (e.g., 'sudo apt install python3').${NC}"; exit 1; }
+command -v cargo >/dev/null 2>&1 || { echo "Rust/Cargo is required to build the hardened backend; the legacy prebuilt binary is unsupported."; exit 1; }
+python3 -c 'import sys; assert sys.version_info >= (3, 11), "Python >=3.11 is required for Pillow 13"'
 
 # Set install directory
 INSTALL_DIR="$HOME/Cricket-Ready-Backend"
 mkdir -p "$INSTALL_DIR"
 cd "$INSTALL_DIR"
 
-# Download the pre-built binary
-echo "Downloading Cricket-Ready Ball Classifier Backend binary..."
-curl -sSL -o Cricket-Ready-Backend https://raw.githubusercontent.com/AlexanderHeffernan/Cricket-Ready-Ball-Classifier/main/backend/bin/Cricket-Ready-Backend
-chmod +x Cricket-Ready-Backend
+# Build the hardened sources rather than installing the stale checked-in binary.
+echo "Building Cricket-Ready Ball Classifier Backend (requires a current Rust toolchain and OpenSSL development headers)..."
+mkdir -p src training_data/pending
+for file in Cargo.toml Cargo.lock src/main.rs; do
+    curl -fsSL -o "$file" "https://raw.githubusercontent.com/AlexanderHeffernan/Cricket-Ready-Ball-Classifier/main/backend/$file"
+done
+cargo build --release --locked
+install -m 755 target/release/Cricket-Ready-Backend Cricket-Ready-Backend
 
 # Create nn-classifier directory and download predict.py
 echo "Setting up neural network classifier..."
@@ -61,16 +67,8 @@ echo -e "${GREEN}All models downloaded successfully${NC}"
 # Go back to nn-classifier directory
 cd ..
 
-# Download requirements.txt if it exists
-echo "Downloading requirements.txt..."
-curl -sSL -o requirements.txt https://raw.githubusercontent.com/AlexanderHeffernan/Cricket-Ready-Ball-Classifier/main/backend/nn-classifier/requirements.txt || {
-    echo -e "${YELLOW}No requirements.txt found, creating one with basic dependencies...${NC}"
-    cat > requirements.txt <<EOF
-torch
-torchvision
-pillow
-EOF
-}
+# Fail closed instead of falling back to unconstrained dependency versions.
+curl -fsSL -o requirements-inference.txt https://raw.githubusercontent.com/AlexanderHeffernan/Cricket-Ready-Ball-Classifier/main/backend/nn-classifier/requirements-inference.txt
 
 # Set up Python virtual environment
 echo "Creating Python virtual environment..."
@@ -80,7 +78,7 @@ python3 -m venv venv
 echo "Installing Python packages..."
 source venv/bin/activate
 pip install --upgrade pip
-pip install -r requirements.txt
+pip install -r requirements-inference.txt
 
 # Verify installation
 echo "Verifying Python environment..."
@@ -116,6 +114,15 @@ ExecStart=$INSTALL_DIR/Cricket-Ready-Backend
 WorkingDirectory=$INSTALL_DIR
 Restart=always
 User=$(whoami)
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=$INSTALL_DIR/training_data
+MemoryMax=2G
+TasksMax=64
+CPUQuota=200%
+UMask=0077
 
 [Install]
 WantedBy=multi-user.target
@@ -128,7 +135,7 @@ sudo systemctl start cricket-ready-backend.service
 
 # Verify it's running
 if sudo systemctl is-active cricket-ready-backend.service >/dev/null; then
-    echo -e "${GREEN}Cricket-Ready Ball Classifier Backend installed and running at https://$(hostname):49160/predict${NC}"
+    echo -e "${GREEN}Cricket-Ready Ball Classifier Backend installed and running at https://$(hostname):49161/predict${NC}"
 else
     echo -e "${RED}Failed to start Cricket-Ready Ball Classifier Backend. Check logs with 'journalctl -u cricket-ready-backend.service'${NC}"
     exit 1

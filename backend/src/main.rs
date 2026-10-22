@@ -1,322 +1,385 @@
-mod request_logger;
-
-use rusty_api;
+use actix_cors::Cors;
 use actix_multipart::Multipart;
-use futures_util::StreamExt as _;
-use bytes::BytesMut;
-use chrono::Utc;
-use std::process::Command;
-use std::fs;
-use std::path::Path;
+use actix_web::{http::StatusCode, web, App, HttpRequest, HttpResponse, HttpServer};
+use futures_util::StreamExt;
 use serde_json::{json, Value};
-use actix_web::{http};
-use regex::Regex;
+use std::{
+    fs,
+    io::Write,
+    path::PathBuf,
+    sync::Arc,
+    time::{Duration, SystemTime},
+};
+use tempfile::TempDir;
+use tokio::{process::Command, sync::Semaphore, time::timeout};
 
-use request_logger::RequestLogger;
+const MAX_IMAGE: usize = 5 * 1024 * 1024;
+const MAX_PENDING_BYTES: u64 = 256 * 1024 * 1024;
+const MAX_PENDING_FILES: usize = 500;
+const RETENTION: Duration = Duration::from_secs(7 * 24 * 3600);
 
-/// Parses the multipart payload, extracting the image data and optional label.
-async fn parse_multipart(mut payload: Multipart) -> Result<(BytesMut, Option<String>), rusty_api::HttpResponse> {
-    let mut image_bytes = BytesMut::new();
+struct State {
+    admission: Arc<Semaphore>,
+    inference: Arc<Semaphore>,
+    storage: Arc<Semaphore>,
+    pending: PathBuf,
+    python: String,
+}
+
+type Failure = (StatusCode, &'static str);
+fn bad() -> Failure {
+    (StatusCode::BAD_REQUEST, "Invalid image upload")
+}
+fn unavailable() -> Failure {
+    (
+        StatusCode::SERVICE_UNAVAILABLE,
+        "Service busy; please try again later",
+    )
+}
+fn internal() -> Failure {
+    (StatusCode::INTERNAL_SERVER_ERROR, "Image processing failed")
+}
+fn response(result: Result<Value, Failure>) -> HttpResponse {
+    match result {
+        Ok(value) => HttpResponse::Ok().json(value),
+        Err((code, message)) => HttpResponse::build(code).body(message),
+    }
+}
+
+// Count every field and byte before copying; no client filename or MIME type is trusted.
+async fn parse(
+    mut payload: Multipart,
+    training: bool,
+) -> Result<(Vec<u8>, Option<String>), Failure> {
+    let mut image = None;
     let mut label = None;
-
+    let mut fields = 0;
     while let Some(item) = payload.next().await {
-        let mut field = match item {
-            Ok(f) => f,
-            Err(e) => return Err(rusty_api::HttpResponse::BadRequest().body(format!("Multipart error: {e}"))),
+        fields += 1;
+        if fields > if training { 2 } else { 1 } {
+            return Err(bad());
+        }
+        let mut field = item.map_err(|_| bad())?;
+        let name = field.name().unwrap_or("").to_owned();
+        let limit = match name.as_str() {
+            "image" if image.is_none() => MAX_IMAGE,
+            "label" if training && label.is_none() => 15,
+            _ => return Err(bad()),
         };
-
-        match field.name() {
-            "image" => {
-                while let Some(chunk) = field.next().await {
-                    let data = match chunk {
-                        Ok(d) => d,
-                        Err(e) => return Err(rusty_api::HttpResponse::InternalServerError().body(format!("Read error: {e}"))),
-                    };
-                    image_bytes.extend_from_slice(&data);
-                }
+        let mut bytes = Vec::new();
+        while let Some(chunk) = field.next().await {
+            let chunk = chunk.map_err(|_| bad())?;
+            if chunk.len() > limit - bytes.len() {
+                return Err((StatusCode::PAYLOAD_TOO_LARGE, "Upload exceeds size limit"));
             }
-            "label" => {
-                let mut label_data = BytesMut::new();
-                while let Some(chunk) = field.next().await {
-                    let data = match chunk {
-                        Ok(d) => d,
-                        Err(e) => return Err(rusty_api::HttpResponse::InternalServerError().body(format!("Read error: {e}"))),
-                    };
-                    label_data.extend_from_slice(&data);
-                }
-                label = Some(String::from_utf8_lossy(&label_data).to_string());
-            }
-            _ => {
-                return Err(rusty_api::HttpResponse::BadRequest()
-                    .body(format!("Unexpected field: {}", field.name())));
-            }
+            bytes.extend_from_slice(&chunk);
+        }
+        if name == "image" {
+            image = Some(bytes);
+        } else {
+            label = Some(String::from_utf8(bytes).map_err(|_| bad())?);
         }
     }
-
-    if image_bytes.is_empty() {
-        return Err(rusty_api::HttpResponse::BadRequest().body("No image data received"));
+    let image = image.filter(|b| !b.is_empty()).ok_or_else(bad)?;
+    if training && !matches!(label.as_deref(), Some("match_ready" | "not_match_ready")) {
+        return Err(bad());
     }
-
-    Ok((image_bytes, label))
+    Ok((image, label))
 }
 
-/// Parses the multipart payload for prediction (image only).
-async fn parse_multipart_predict(mut payload: Multipart) -> Result<BytesMut, rusty_api::HttpResponse> {
-    let mut image_bytes = BytesMut::new();
-
-    while let Some(item) = payload.next().await {
-        let mut field = match item {
-            Ok(f) => f,
-            Err(e) => return Err(rusty_api::HttpResponse::BadRequest().body(format!("Multipart error: {e}"))),
-        };
-
-        match field.name() {
-            "image" => {
-                while let Some(chunk) = field.next().await {
-                    let data = match chunk {
-                        Ok(d) => d,
-                        Err(e) => return Err(rusty_api::HttpResponse::InternalServerError().body(format!("Read error: {e}"))),
-                    };
-                    image_bytes.extend_from_slice(&data);
-                }
-            }
-            _ => {
-                return Err(rusty_api::HttpResponse::BadRequest()
-                    .body(format!("Unexpected field: {}", field.name())));
-            }
-        }
-    }
-
-    if image_bytes.is_empty() {
-        return Err(rusty_api::HttpResponse::BadRequest().body("No image data received"));
-    }
-
-    Ok(image_bytes)
-}
-
-/// Training route handler for saving labeled cricket ball images.
-/// Accepts multipart form-data with "image" and "label" fields.
-async fn training_route(payload: Multipart) -> rusty_api::HttpResponse {
-    let request_id = Utc::now().timestamp_millis();
-    let logger = RequestLogger::new(request_id);
-
-    logger.info("Received request to /training");
-
-    // Parse multipart payload
-    let (image_bytes, label) = match parse_multipart(payload).await {
-        Ok((bytes, lbl)) => (bytes, lbl),
-        Err(resp) => {
-            logger.error("Failed to parse multipart payload");
-            return resp;
-        },
-    };
-
-    let label = match label {
-        Some(l) => l,
-        None => {
-            logger.error("No label provided");
-            return rusty_api::HttpResponse::BadRequest().body("Label is required for training data");
-        }
-    };
-
-    // Validate label
-    if label != "match_ready" && label != "not_match_ready" {
-        logger.error(format!("Invalid label: {}", label));
-        return rusty_api::HttpResponse::BadRequest()
-            .body("Label must be either 'match_ready' or 'not_match_ready'");
-    }
-
-    logger.info(format!("Training image received: {} bytes, label: {}", image_bytes.len(), label));
-
-    // Create training data directory structure
-    let training_dir = "training_data";
-    let label_dir = format!("{}/{}", training_dir, label);
-    
-    // Create directories if they don't exist
-    if let Err(e) = fs::create_dir_all(&label_dir) {
-        logger.error(format!("Failed to create training directory: {}", e));
-        return rusty_api::HttpResponse::InternalServerError()
-            .body(format!("Failed to create training directory: {}", e));
-    }
-
-    // Generate unique filename with timestamp
-    let timestamp = Utc::now().format("%Y%m%d_%H%M%S_%3f");
-    let filename = format!("cricket_ball_{}_{}.jpg", timestamp, request_id);
-    let file_path = format!("{}/{}", label_dir, filename);
-
-    // Write image to training directory
-    if let Err(e) = fs::write(&file_path, &image_bytes) {
-        logger.error(format!("Failed to write training image: {}", e));
-        return rusty_api::HttpResponse::InternalServerError()
-            .body(format!("Failed to write training image: {}", e));
-    }
-
-    logger.info(format!("Training image saved: {}", file_path));
-
-    // Log training data submission for audit trail
-    let log_entry = json!({
-        "timestamp": Utc::now().to_rfc3339(),
-        "request_id": request_id,
-        "label": label,
-        "filename": filename,
-        "file_path": file_path,
-        "image_size_bytes": image_bytes.len()
-    });
-
-    // Append to training log file
-    let log_file = format!("{}/training_log.jsonl", training_dir);
-    let log_line = format!("{}\n", log_entry.to_string());
-    
-    if let Err(e) = fs::OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(&log_file)
-        .and_then(|mut file| {
-            use std::io::Write;
-            file.write_all(log_line.as_bytes())
-        })
-    {
-        logger.error(format!("Failed to write to training log: {}", e));
-        // Don't fail the request if logging fails, just log the error
-    }
-
-    // Return success response
-    let response = json!({
-        "status": "success",
-        "message": "Training data saved successfully",
-        "filename": filename,
-        "label": label,
-        "request_id": request_id
-    });
-
-    match serde_json::to_string(&response) {
-        Ok(json) => {
-            logger.info(format!("Training data saved successfully: {}", filename));
-            rusty_api::HttpResponse::Ok()
-                .content_type("application/json")
-                .body(json)
-        }
-        Err(e) => {
-            logger.error(format!("Serialization error: {}", e));
-            rusty_api::HttpResponse::InternalServerError()
-                .body(format!("Serialization error: {}", e))
-        }
-    }
-}
-
-/// Main route handler for cricket ball prediction.
-/// Accepts multipart form-data with "image" field.
-async fn predict_image_route(payload: Multipart) -> rusty_api::HttpResponse {
-    let request_id = Utc::now().timestamp_millis();
-    let logger = RequestLogger::new(request_id);
-
-    logger.info("Received request to /predict");
-
-    // Parse multipart payload
-    let image_bytes = match parse_multipart_predict(payload).await {
-        Ok(bytes) => bytes,
-        Err(resp) => {
-            logger.error("Failed to parse multipart payload");
-            return resp;
-        },
-    };
-
-    logger.info(format!("Image received: {} bytes", image_bytes.len()));
-
-    // Create temporary file for the image
-    let temp_path = format!("/tmp/cricket_ball_{}.jpg", request_id);
-    
-    // Write image to temporary file
-    if let Err(e) = fs::write(&temp_path, &image_bytes) {
-        logger.error(format!("Failed to write temporary file: {}", e));
-        return rusty_api::HttpResponse::InternalServerError()
-            .body(format!("Failed to write temporary file: {}", e));
-    }
-
-    logger.info(format!("Temporary file created: {}", temp_path));
-
-    // Call the Python prediction script
-    let output = match Command::new("nn-classifier/venv/bin/python3")
+async fn python(
+    state: &State,
+    args: &[&std::ffi::OsStr],
+    seconds: u64,
+    temp: &std::path::Path,
+) -> Result<String, Failure> {
+    let mut child = Command::new(&state.python)
         .arg("nn-classifier/predict.py")
-        .arg(&temp_path)
-        .current_dir(".")  // Run from backend directory
-        .output()
-    {
-        Ok(output) => output,
-        Err(e) => {
-            logger.error(format!("Failed to execute predict.py: {}", e));
-            // Clean up temp file
-            fs::remove_file(&temp_path).ok();
-            return rusty_api::HttpResponse::InternalServerError()
-                .body(format!("Failed to execute prediction: {}", e));
-        }
+        .args(args)
+        .env("OMP_NUM_THREADS", "1")
+        .env("MKL_NUM_THREADS", "1")
+        .env("OPENBLAS_NUM_THREADS", "1")
+        .env("TMPDIR", temp)
+        .env("TORCHINDUCTOR_CACHE_DIR", temp.join("torch-cache"))
+        .kill_on_drop(true)
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .spawn()
+        .map_err(|e| {
+            log::error!("Python launch: {e}");
+            internal()
+        })?;
+    // Drain both pipes with hard diagnostic budgets. Timeout kills and reaps before releasing capacity.
+    use tokio::io::AsyncReadExt;
+    let mut stdout = child.stdout.take().unwrap().take(16384);
+    let mut stderr = child.stderr.take().unwrap().take(16384);
+    let read = async {
+        let mut out = Vec::new();
+        let mut err = Vec::new();
+        let (a, b) = tokio::join!(stdout.read_to_end(&mut out), stderr.read_to_end(&mut err));
+        a?;
+        b?;
+        let status = child.wait().await?;
+        Ok::<_, std::io::Error>((status, out, err))
     };
-
-    // Clean up temporary file
-    if let Err(e) = fs::remove_file(&temp_path) {
-        logger.error(format!("Failed to clean up temp file: {}", e));
-    }
-
-    // Check if the command executed successfully
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        logger.error(format!("Prediction script failed: {}", stderr));
-        return rusty_api::HttpResponse::InternalServerError()
-            .body(format!("Prediction failed: {}", stderr));
-    }
-
-    // Parse the prediction output
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    logger.info("Prediction completed successfully");
-
-    // Extract prediction results from the output
-    // The predict.py script outputs structured text, so we'll parse it
-    let prediction_result = parse_prediction_output(&stdout);
-    
-    match serde_json::to_string(&prediction_result) {
-        Ok(json) => {
-            logger.info(format!("Returning prediction: {}", json));
-            rusty_api::HttpResponse::Ok()
-                .content_type("application/json")
-                .body(json)
+    match timeout(Duration::from_secs(seconds), read).await {
+        Err(_) => {
+            let _ = child.kill().await;
+            let _ = child.wait().await;
+            log::error!("Python exceeded {seconds}s deadline");
+            Err((StatusCode::GATEWAY_TIMEOUT, "Image processing timed out"))
         }
-        Err(e) => {
-            logger.error(format!("Serialization error: {}", e));
-            rusty_api::HttpResponse::InternalServerError()
-                .body(format!("Serialization error: {}", e))
+        Ok(Err(e)) => {
+            log::error!("Python IO: {e}");
+            Err(internal())
+        }
+        Ok(Ok((status, out, err))) => {
+            if !status.success() {
+                log::error!(
+                    "Python {status}: {} {}",
+                    String::from_utf8_lossy(&err),
+                    String::from_utf8_lossy(&out)
+                );
+                return Err(if status.code() == Some(2) {
+                    bad()
+                } else {
+                    internal()
+                });
+            }
+            String::from_utf8(out).map_err(|_| internal())
         }
     }
 }
 
-/// Parse the output from predict.py script into a structured JSON response
-fn parse_prediction_output(output: &str) -> Value {
-    let mut prediction = "unknown";
-    let mut confidence = 0.0;
-    // Expect output like: "Prediction: match_ready; Confidence: 0.9876"
-    let re = Regex::new(r"Prediction:\s*(match_ready|not_match_ready);\s*Confidence:\s*([0-9.]+)").unwrap();
-    if let Some(caps) = re.captures(output) {
-        prediction = caps.get(1).map_or("unknown", |m| m.as_str());
-        confidence = caps.get(2).and_then(|m| m.as_str().parse::<f64>().ok()).unwrap_or(0.0);
+// Only this directory is managed automatically; approved datasets are never touched.
+fn prune(pending: &std::path::Path) -> std::io::Result<(usize, u64)> {
+    fs::create_dir_all(pending)?;
+    let mut count = 0;
+    let mut bytes = 0;
+    for label in ["match_ready", "not_match_ready"] {
+        let directory = pending.join(label);
+        fs::create_dir_all(&directory)?;
+        for entry in fs::read_dir(directory)? {
+            let entry = entry?;
+            let meta = entry.metadata()?;
+            if !meta.is_file() {
+                continue;
+            }
+            if SystemTime::now()
+                .duration_since(meta.modified()?)
+                .unwrap_or_default()
+                >= RETENTION
+            {
+                fs::remove_file(entry.path())?;
+            } else {
+                count += 1;
+                bytes += meta.len();
+            }
+        }
     }
-    json!({ "prediction": prediction, "confidence": confidence })
+    Ok((count, bytes))
 }
 
-/// Entrypoint: sets up API routes, TLS, CORS, and starts the server.
-fn main() {
-    let routes = rusty_api::Routes::new()
-        .add_route(rusty_api::Method::POST, "/predict", predict_image_route)
-        .add_route(rusty_api::Method::POST, "/training", training_route);
+async fn process(
+    state: Arc<State>,
+    image: Vec<u8>,
+    label: Option<String>,
+) -> Result<Value, Failure> {
+    let temp = TempDir::new().map_err(|_| internal())?;
+    let input = temp.path().join("upload");
+    let normalized = temp.path().join("image.jpg");
+    fs::write(&input, image).map_err(|e| {
+        log::error!("Temporary upload: {e}");
+        internal()
+    })?;
+    let mode = if label.is_some() {
+        "--normalize"
+    } else {
+        "--validate"
+    };
+    python(
+        &state,
+        &[mode.as_ref(), input.as_os_str(), normalized.as_os_str()],
+        10,
+        temp.path(),
+    )
+    .await?;
+    if let Some(label) = label {
+        let _lock = state.storage.acquire().await.map_err(|_| internal())?;
+        let pending = state.pending.clone();
+        return tokio::task::spawn_blocking(move || {
+            // Hold the directory and serialization permit until the write has finished, even on disconnect.
+            let _temp = temp;
+            let (count, bytes) = prune(&pending).map_err(|e| { log::error!("Quarantine: {e}"); internal() })?;
+            let size = fs::metadata(&normalized).map_err(|_| internal())?.len();
+            if count >= MAX_PENDING_FILES || bytes + size > MAX_PENDING_BYTES { return Err(unavailable()); }
+            let mut file = tempfile::Builder::new().prefix("contribution-").suffix(".jpg")
+                .tempfile_in(pending.join(&label)).map_err(|_| internal())?;
+            std::io::copy(&mut fs::File::open(normalized).map_err(|_| internal())?, &mut file).map_err(|_| internal())?;
+            file.flush().map_err(|_| internal())?;
+            let filename = file.path().file_name().unwrap().to_string_lossy().into_owned();
+            file.keep().map_err(|_| internal())?;
+            Ok(json!({"status": "success", "message": "Training data submitted successfully", "filename": filename, "label": label, "review_status": "pending"}))
+        }).await.map_err(|_| internal())?;
+    }
+    let _permit = state
+        .inference
+        .clone()
+        .try_acquire_owned()
+        .map_err(|_| unavailable())?;
+    let output = python(
+        &state,
+        &[input.as_os_str(), "--json".as_ref()],
+        60,
+        temp.path(),
+    )
+    .await?;
+    let value: Value = serde_json::from_str(output.trim()).map_err(|_| internal())?;
+    if !matches!(
+        value["prediction"].as_str(),
+        Some("match_ready" | "not_match_ready")
+    ) || !value["confidence"]
+        .as_f64()
+        .is_some_and(|v| v.is_finite() && (0.0..=1.0).contains(&v))
+    {
+        return Err(internal());
+    }
+    Ok(value)
+}
 
-    rusty_api::Api::new()
-        .certs("cricket-ready.crt", "cricket-ready.key")
-        .rate_limit(3, 20)
-        .bind("0.0.0.0", 49161)
-        .configure_routes(routes)
-        .configure_cors(|| {
-            rusty_api::Cors::default()
-                .allowed_origin("https://alexheffernan.dev")
-                .allowed_methods(vec!["POST"])
-                .allowed_headers(vec!["Content-Type", "Authorization"])
+async fn upload(
+    req: HttpRequest,
+    payload: web::Payload,
+    state: web::Data<Arc<State>>,
+    training: bool,
+) -> HttpResponse {
+    let permit = match state.admission.clone().try_acquire_owned() {
+        Ok(permit) => permit,
+        Err(_) => return response(Err(unavailable())),
+    };
+    // Bound the entire multipart envelope too, including preambles and field headers.
+    let stream = payload.scan(0usize, |total, chunk| {
+        let result = chunk.and_then(|chunk| {
+            *total = total.saturating_add(chunk.len());
+            if *total > MAX_IMAGE + 64 * 1024 {
+                Err(actix_web::error::PayloadError::Overflow)
+            } else {
+                Ok(chunk)
+            }
+        });
+        futures_util::future::ready(Some(result))
+    });
+    let multipart = Multipart::new(req.headers(), stream);
+    let parsed = timeout(Duration::from_secs(15), parse(multipart, training)).await;
+    let (image, label) = match parsed {
+        Ok(Ok(parsed)) => parsed,
+        Ok(Err(e)) => return response(Err(e)),
+        Err(_) => return HttpResponse::RequestTimeout().body("Upload timed out"),
+    };
+    let state = state.get_ref().clone();
+    // Own capacity and temp files independently of the HTTP connection's lifetime.
+    response(
+        tokio::spawn(async move {
+            let _permit = permit;
+            process(state, image, label).await
         })
-        .start();
+        .await
+        .unwrap_or_else(|e| {
+            log::error!("Processing task: {e}");
+            Err(internal())
+        }),
+    )
+}
+async fn predict(
+    req: HttpRequest,
+    payload: web::Payload,
+    state: web::Data<Arc<State>>,
+) -> HttpResponse {
+    upload(req, payload, state, false).await
+}
+async fn training(
+    req: HttpRequest,
+    payload: web::Payload,
+    state: web::Data<Arc<State>>,
+) -> HttpResponse {
+    upload(req, payload, state, true).await
+}
+
+#[actix_web::main]
+async fn main() -> std::io::Result<()> {
+    env_logger::init_from_env(env_logger::Env::default().default_filter_or("info"));
+    let state = Arc::new(State {
+        admission: Arc::new(Semaphore::new(2)),
+        inference: Arc::new(Semaphore::new(1)),
+        storage: Arc::new(Semaphore::new(1)),
+        pending: std::env::var_os("TRAINING_PENDING_DIR")
+            .map(PathBuf::from)
+            .unwrap_or_else(|| "training_data/pending".into()),
+        python: std::env::var("PYTHON_EXECUTABLE")
+            .unwrap_or_else(|_| "nn-classifier/venv/bin/python3".into()),
+    });
+    prune(&state.pending)?;
+    let cleanup = state.clone();
+    tokio::spawn(async move {
+        loop {
+            tokio::time::sleep(Duration::from_secs(3600)).await;
+            let _lock = cleanup.storage.acquire().await.unwrap();
+            let path = cleanup.pending.clone();
+            if let Err(e) = tokio::task::spawn_blocking(move || prune(&path))
+                .await
+                .unwrap()
+            {
+                log::error!("Retention cleanup: {e}");
+            }
+        }
+    });
+    let origins = std::env::var("ALLOWED_ORIGINS").unwrap_or_else(|_| {
+        "https://alexheffernan.dev,https://alexanderheffernan.github.io".into()
+    });
+    // Retain the previous peer-IP burst/refill policy. Never trust arbitrary forwarded headers.
+    let governor = actix_governor::GovernorConfigBuilder::default()
+        .seconds_per_request(3)
+        .burst_size(20)
+        .finish()
+        .unwrap();
+    let limiter = governor.limiter();
+    tokio::spawn(async move {
+        loop {
+            tokio::time::sleep(Duration::from_secs(60)).await;
+            limiter.retain_recent();
+            limiter.shrink_to_fit();
+        }
+    });
+    let server = HttpServer::new(move || {
+        let mut cors = Cors::default()
+            .allowed_methods(vec!["POST"])
+            .allowed_headers(vec![
+                "Content-Type",
+                "Authorization",
+                "ngrok-skip-browser-warning",
+            ]);
+        for origin in origins.split(',') {
+            cors = cors.allowed_origin(origin.trim());
+        }
+        App::new()
+            .app_data(web::Data::new(state.clone()))
+            .wrap(actix_web::middleware::Logger::new("%a %m %U %s %D"))
+            .wrap(actix_governor::Governor::new(&governor))
+            .wrap(cors)
+            .route("/predict", web::post().to(predict))
+            .route("/training", web::post().to(training))
+    })
+    .workers(2)
+    .max_connections(128)
+    .client_request_timeout(Duration::from_secs(15));
+    // TLS remains the default; plain HTTP is opt-in for a loopback TLS-terminating proxy only.
+    if std::env::var("HTTP_LOOPBACK").as_deref() == Ok("1") {
+        server.bind(("127.0.0.1", 49161))?.run().await
+    } else {
+        use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
+        let mut tls = SslAcceptor::mozilla_intermediate(SslMethod::tls())?;
+        tls.set_private_key_file("cricket-ready.key", SslFiletype::PEM)?;
+        tls.set_certificate_chain_file("cricket-ready.crt")?;
+        server.bind_openssl(("0.0.0.0", 49161), tls)?.run().await
+    }
 }

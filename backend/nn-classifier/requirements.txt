@@ -1,10 +1,4 @@
-# Core PyTorch packages
-torch>=1.9.0
-torchvision>=0.10.0
-
-# Image processing
-Pillow>=8.0.0
+-r requirements-inference.txt
 
 # Machine learning utilities
-scikit-learn>=1.0.0
-numpy>=1.21.0
+scikit-learn>=1.7,<2

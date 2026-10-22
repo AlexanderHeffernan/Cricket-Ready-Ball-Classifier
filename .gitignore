@@ -1,2 +1,9 @@
 .DS_Store
 */.DS_Store
+backend/target/
+backend/nn-classifier/venv/
+backend/training_data/pending/
+backend/certs/
+**/__pycache__/
+frontend/node_modules/
+frontend/dist/
