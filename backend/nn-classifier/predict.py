@@ -11,23 +11,48 @@ Examples:
     python predict.py /Users/username/Desktop/cricket_ball.jpg
 """
 
-# Check for required dependencies
-try:
+import json
+import os
+import sys
+import warnings
+from PIL import Image
+
+MAX_BYTES = 5 * 1024 * 1024
+MAX_PIXELS = 12_000_000
+MAX_SIDE = 4096
+Image.MAX_IMAGE_PIXELS = MAX_PIXELS
+warnings.simplefilter("error", Image.DecompressionBombWarning)
+
+
+def open_image(path):
+    """Restrict decoders before sniffing, then bound dimensions before decoding pixels."""
+    if os.path.getsize(path) > MAX_BYTES:
+        raise ValueError("Image exceeds byte limit")
+    with Image.open(path, formats=("JPEG", "PNG")) as image:
+        width, height = image.size
+        if not (0 < width <= MAX_SIDE and 0 < height <= MAX_SIDE and width * height <= MAX_PIXELS):
+            raise ValueError("Image dimensions exceed limit")
+        if getattr(image, "n_frames", 1) != 1:
+            raise ValueError("Animated images are not accepted")
+        image.load()
+        return image.convert("RGB")
+
+
+def normalize(source, destination):
+    image = open_image(source)
+    # A clean re-encode discards EXIF, comments, embedded profiles and trailing bytes.
+    image.info.clear()
+    image.save(destination, format="JPEG", quality=95)
+    if os.path.getsize(destination) > MAX_BYTES:
+        os.unlink(destination)
+        raise ValueError("Normalized image exceeds byte limit")
+
+def main():
     import torch
     import torch.nn as nn
     from torchvision import models, transforms
-    from PIL import Image
-    import os
-    import sys
     import torch.nn.functional as F
-except ImportError as e:
-    print(f"❌ Missing required package: {e}")
-    print("💡 Install required packages with:")
-    print("   pip install torch torchvision pillow")
-    print("   Or use: pip install -r requirements.txt")
-    exit(1)
-
-def main():
+    torch.set_num_threads(1)
     # Parameters
     models_dir = 'nn-classifier/models'   # Directory containing trained models
     model_paths = [os.path.join(models_dir, f"model_{i}.pth") for i in range(1,4)]
@@ -74,7 +99,7 @@ def main():
 
     # Load and preprocess image
     try:
-        image = Image.open(image_path).convert('RGB')
+        image = open_image(image_path)
         input_tensor = transform(image).unsqueeze(0).to(device)  # shape: [1, 3, 224, 224]
     except Exception as e:
         print(f"❌ Error loading image: {e}")
@@ -92,7 +117,7 @@ def main():
                 nn.Linear(model.fc.in_features, len(class_names))
             )
             
-            model.load_state_dict(torch.load(path, map_location=device))
+            model.load_state_dict(torch.load(path, map_location=device, weights_only=True))
             model.to(device)
             model.eval()  # Important: disable dropout during inference
             models_list.append(model)
@@ -118,7 +143,21 @@ def main():
         label = class_names[predicted_class]
 
     # Display results
-    print(f"Prediction: {label}; Confidence: {confidence:.4f}")
+    if "--json" in sys.argv[2:]:
+        print(json.dumps({"prediction": label, "confidence": round(confidence, 4)}))
+    else:
+        # Keep the desktop GUI and command-line output contract.
+        print(f"Prediction: {label}; Confidence: {confidence:.4f}")
 
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) == 4 and sys.argv[1] in ("--normalize", "--validate"):
+        try:
+            if sys.argv[1] == "--normalize":
+                normalize(sys.argv[2], sys.argv[3])
+            else:
+                open_image(sys.argv[2])
+        except Exception as error:
+            print(f"Image validation: {error}", file=sys.stderr)
+            sys.exit(2)
+    else:
+        main()

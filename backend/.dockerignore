@@ -1,0 +1,10 @@
+target
+bin
+training_data
+certs
+*.key
+*.crt
+nn-classifier/venv
+nn-classifier/dataset
+nn-classifier/test_images
+**/__pycache__

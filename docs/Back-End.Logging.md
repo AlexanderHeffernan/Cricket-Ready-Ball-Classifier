@@ -2,8 +2,8 @@
 
 ## Logging
 
-- All requests are logged via `request_logger.rs`
-- Logs are written to `backend.log`
+- Actix logs request metadata; internal Python errors are logged without returning them to clients.
+- Logs go to service stderr (systemd journal or rotated Docker logs), not `backend.log`.
 
 ## Monitoring
 
@@ -12,5 +12,5 @@
 
 ## Troubleshooting
 
-- Check `backend.log` for errors
+- Check `journalctl -u cricket-ready-backend.service` or `docker compose logs api` for errors
 - Use `RUST_LOG=debug` for more verbose output
